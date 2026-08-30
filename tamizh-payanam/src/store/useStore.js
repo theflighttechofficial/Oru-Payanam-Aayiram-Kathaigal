@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import {
-  playHorn, playEngineStart, playEngineRev, playIndicatorTick, playBell,
+  playHorn, playEngineRev, playIndicatorTick, playBell,
   playClick, playTicketPrint, setMuted, startEngineHum, stopEngineHum,
   setAmbientRoute, startAmbient, stopAmbient,
+  startRadio, stopRadio, tuneRadio, setRadioVolume,
 } from '../audio/sound'
 
 let leftBlinkTimer = null
@@ -65,10 +66,12 @@ const useStore = create((set, get) => ({
   deckTape: null,         // tape physically in deck slot (null = empty slot)
   isPlaying: false,
   currentTrackIndex: 0,
+  nowPlayingTitle: '',
   volume: 75,
   playerMode: 'tape',     // 'tape' | 'radio'
   playerReady: false,
   showTapeRack: false,
+  busHidden: false,
 
   boot: () => {
     if (get().muted) setMuted(true)
@@ -87,13 +90,16 @@ const useStore = create((set, get) => ({
   toggleEngine: () => {
     const { engineOn } = get()
     if (!engineOn) {
-      playEngineStart()
-      setTimeout(() => startEngineHum(), 1700)
+      startEngineHum()
       set({ engineOn: true, headlightsOn: true })
       get().showToast('🔑 என்ஜின் ஆன் — ENGINE STARTED')
     } else {
       stopEngineHum()
-      set({ engineOn: false, headlightsOn: false, leftIndicatorOn: false, rightIndicatorOn: false })
+      if (speedTimer) { clearInterval(speedTimer); speedTimer = null }
+      set({
+        engineOn: false, headlightsOn: false, leftIndicatorOn: false, rightIndicatorOn: false,
+        transitioning: false, transitPhase: 'idle', speed: 0,
+      })
       get().showToast('என்ஜின் ஆஃப் — ENGINE OFF')
     }
   },
@@ -123,18 +129,27 @@ const useStore = create((set, get) => ({
   },
 
   setRoute: (idx) => {
-    const { transitioning, currentRoute } = get()
+    const { transitioning, currentRoute, engineOn } = get()
     if (transitioning || idx === currentRoute) return
+    if (!engineOn) {
+      get().showToast('🔑 என்ஜினை முதலில் ஆன் செய்யுங்கள் — start the engine first')
+      return
+    }
     set({ transitioning: true, transitPhase: 'cranking', headlightsOn: true, speed: 0 })
     playEngineRev()
 
     if (speedTimer) clearInterval(speedTimer)
     setTimeout(() => set({ transitPhase: 'moving' }), 400)
     let sp = 0
+    const cruise = 52 + Math.random() * 10 // ~52-62 km/h cruising speed, varies per trip
     speedTimer = setInterval(() => {
-      sp = Math.min(sp + 7, 58)
-      set({ speed: sp })
-    }, 90)
+      if (sp < cruise - 6) {
+        sp = Math.min(sp + 9, cruise) // ramp up to cruising speed
+      } else {
+        sp = Math.max(38, Math.min(66, sp + (Math.random() * 10 - 5))) // jitter while cruising
+      }
+      set({ speed: Math.round(sp) })
+    }, 160)
     setTimeout(() => {
       set({
         currentRoute: idx,
@@ -150,8 +165,16 @@ const useStore = create((set, get) => ({
     }, 2400)
   },
 
-  setRadioStation: (idx) => set({ radioStation: idx }),
-  toggleRadio: () => set((s) => ({ radioPlaying: !s.radioPlaying })),
+  setRadioStation: (idx) => {
+    const s = get()
+    if (s.playerMode === 'radio' && s.radioPlaying) tuneRadio(idx)
+    set({ radioStation: idx })
+  },
+  toggleRadio: () => set((s) => {
+    const next = !s.radioPlaying
+    if (s.playerMode === 'radio') { if (next) startRadio(s.radioStation); else stopRadio() }
+    return { radioPlaying: next }
+  }),
   bumpKnobClicks: () => {
     const n = get().knobClicks + 1
     set({ knobClicks: n })
@@ -203,29 +226,57 @@ const useStore = create((set, get) => ({
   toggleDevMode: () => set((s) => ({ devMode: !s.devMode })),
 
   // ── cassette deck / YouTube player actions ──
+  // Track navigation (next/prev/auto-advance) and the now-playing title are
+  // driven directly off the real YouTube playlist by TamizhRadio (which owns
+  // the player instance) — see setNowPlayingTitle below. currentTrackIndex
+  // just mirrors the player's live playlist position for display.
   loadTape: (tape) => {
     playClick()
-    set({ deckTape: tape, activeTape: tape, currentTrackIndex: 0, playerMode: 'tape', isPlaying: false })
+    set({ deckTape: tape, activeTape: tape, currentTrackIndex: 0, nowPlayingTitle: '', playerMode: 'tape', isPlaying: false })
     get().showToast(`📼 ${tape.labelEng} loaded`)
   },
   ejectTape: () => {
     playClick()
-    set({ deckTape: null, activeTape: null, isPlaying: false })
+    set({ deckTape: null, activeTape: null, isPlaying: false, nowPlayingTitle: '' })
   },
   setPlaying: (v) => set({ isPlaying: v }),
-  setVolume: (v) => set({ volume: Math.max(0, Math.min(100, v)) }),
-  nextTrack: () => set((s) => {
-    if (!s.activeTape) return {}
-    return { currentTrackIndex: (s.currentTrackIndex + 1) % s.activeTape.tracks.length }
-  }),
-  prevTrack: () => set((s) => {
-    if (!s.activeTape) return {}
-    const len = s.activeTape.tracks.length
-    return { currentTrackIndex: (s.currentTrackIndex - 1 + len) % len }
-  }),
+  setVolume: (v) => {
+    const clamped = Math.max(0, Math.min(100, v))
+    setRadioVolume(clamped)
+    set({ volume: clamped })
+  },
+  setNowPlaying: (title, index) => set({ nowPlayingTitle: title, currentTrackIndex: index }),
   setPlayerReady: (v) => set({ playerReady: v }),
   toggleTapeRack: () => set((s) => ({ showTapeRack: !s.showTapeRack })),
-  setPlayerMode: (mode) => set({ playerMode: mode, isPlaying: false }),
+  toggleBusHidden: () => {
+    const s = get()
+    const hiding = !s.busHidden
+    if (hiding) {
+      // Full power-down: engine, lights, indicators, sound, and ambience all off.
+      if (s.engineOn) stopEngineHum()
+      if (speedTimer) { clearInterval(speedTimer); speedTimer = null }
+      if (leftBlinkTimer) { clearInterval(leftBlinkTimer); leftBlinkTimer = null }
+      if (rightBlinkTimer) { clearInterval(rightBlinkTimer); rightBlinkTimer = null }
+      if (s.ambientSound) stopAmbient()
+      if (!s.muted) setMuted(true)
+      set({
+        busHidden: true,
+        engineOn: false, headlightsOn: false,
+        leftIndicatorOn: false, rightIndicatorOn: false, leftIndicatorLit: false, rightIndicatorLit: false,
+        transitioning: false, transitPhase: 'idle', speed: 0,
+        ambientSound: false, muted: true,
+      })
+      get().showToast('🚌 பேருந்து மறைக்கப்பட்டது — bus + dashboard fully off')
+    } else {
+      set({ busHidden: false })
+    }
+  },
+  setPlayerMode: (mode) => {
+    const s = get()
+    if (s.playerMode === 'radio' && mode !== 'radio') stopRadio()
+    if (mode === 'radio' && s.radioPlaying) startRadio(s.radioStation)
+    set({ playerMode: mode, isPlaying: false })
+  },
 }))
 
 export default useStore

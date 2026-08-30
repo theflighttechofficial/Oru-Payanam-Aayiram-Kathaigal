@@ -2,7 +2,7 @@ import React from 'react'
 import useStore from '../store/useStore'
 
 export default function Road() {
-  const { transitPhase } = useStore()
+  const { transitPhase, engineOn } = useStore()
   const isMoving = transitPhase === 'moving'
 
   return (
@@ -14,7 +14,8 @@ export default function Road() {
       <div
         style={{
           ...styles.dashLine,
-          animationPlayState: isMoving ? 'running' : 'paused',
+          animationDuration: isMoving ? '0.7s' : '2.6s',
+          animationPlayState: engineOn ? 'running' : 'paused',
         }}
       />
 
@@ -58,7 +59,6 @@ const styles = {
     height: 4,
     backgroundImage: 'repeating-linear-gradient(90deg, #F3C94B 0, #F3C94B 40px, transparent 40px, transparent 90px)',
     animation: 'roadScroll 0.7s linear infinite',
-    animationPlayState: 'paused',
     opacity: 0.6,
   },
   edgeLeft: {

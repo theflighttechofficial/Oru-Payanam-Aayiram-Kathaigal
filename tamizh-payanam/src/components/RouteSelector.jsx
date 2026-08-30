@@ -3,7 +3,7 @@ import useStore from '../store/useStore'
 import { ROUTES } from '../data/routes'
 
 export default function RouteSelector() {
-  const { currentRoute, setRoute, transitioning, exploredRoutes } = useStore()
+  const { currentRoute, setRoute, transitioning, exploredRoutes, engineOn } = useStore()
 
   return (
     <div className="dash-wrap-center" style={styles.wrap}>
@@ -14,16 +14,23 @@ export default function RouteSelector() {
         <span>🚌</span>
       </div>
 
+      {/* Ignition hint — route buttons stay locked until the engine is started */}
+      {!engineOn && (
+        <div style={styles.ignHint}>🔑 START THE ENGINE FIRST — என்ஜினை ஆன் செய்யவும்</div>
+      )}
+
       {/* Route buttons */}
       <div style={styles.buttons}>
         {ROUTES.map((route, idx) => {
           const isActive = currentRoute === idx
           const isExplored = exploredRoutes.has(idx)
+          const disabled = transitioning || !engineOn
           return (
             <button
               key={idx}
               onClick={() => setRoute(idx)}
-              disabled={transitioning}
+              disabled={disabled}
+              title={!engineOn ? 'Start the engine first' : route.nameT}
               style={{
                 ...styles.btn,
                 borderColor: isActive ? '#F3C94B' : isExplored ? 'rgba(46,139,87,0.6)' : 'rgba(216,155,36,0.25)',
@@ -32,8 +39,8 @@ export default function RouteSelector() {
                   : isExplored ? 'rgba(46,139,87,0.08)' : 'rgba(8,8,8,0.85)',
                 color: isActive ? '#F3C94B' : isExplored ? '#7acca0' : '#D89B24',
                 boxShadow: isActive ? '0 0 16px rgba(243,201,75,0.3)' : 'none',
-                opacity: transitioning ? 0.5 : 1,
-                cursor: transitioning ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.5 : 1,
+                cursor: disabled ? 'not-allowed' : 'pointer',
               }}
             >
               {/* Route number badge */}
@@ -45,11 +52,7 @@ export default function RouteSelector() {
                 {route.routeNum}
               </span>
 
-              {/* Destination name */}
-              <div style={styles.btnContent}>
-                <span style={styles.btnEng}>{route.name.toUpperCase()}</span>
-                <span style={styles.btnTamil}>{route.nameT}</span>
-              </div>
+              <span style={styles.btnEng}>{route.name.toUpperCase()}</span>
 
               {/* Explored checkmark */}
               {isExplored && !isActive && (
@@ -88,51 +91,49 @@ const styles = {
     gap: 8,
   },
   boardLabelText: { color: '#444' },
+  ignHint: {
+    fontFamily: "'Courier Prime', monospace",
+    fontSize: 9,
+    letterSpacing: 1,
+    color: '#F3C94B',
+    marginBottom: 6,
+    textShadow: '0 0 8px rgba(243,201,75,0.4)',
+  },
   buttons: {
     display: 'flex',
-    gap: 8,
-    flexWrap: 'wrap',
+    gap: 5,
     justifyContent: 'center',
+    maxWidth: '92vw',
+    overflowX: 'auto',
   },
   btn: {
     background: 'rgba(8,8,8,0.85)',
     border: '1px solid rgba(216,155,36,0.25)',
     borderRadius: 5,
-    padding: '6px 12px 6px 8px',
+    padding: '5px 8px',
     fontFamily: "'Courier Prime', monospace",
     cursor: 'pointer',
     transition: 'all 0.25s ease',
     display: 'flex',
     alignItems: 'center',
-    gap: 7,
+    gap: 5,
     position: 'relative',
+    flexShrink: 0,
+    whiteSpace: 'nowrap',
   },
   routeNum: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: 700,
-    padding: '2px 5px',
+    padding: '2px 4px',
     borderRadius: 2,
     letterSpacing: 0.5,
     flexShrink: 0,
   },
-  btnContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 1,
-  },
   btnEng: {
-    fontSize: 11,
-    letterSpacing: 1.5,
+    fontSize: 10,
+    letterSpacing: 1,
     fontWeight: 700,
-    lineHeight: 1,
-  },
-  btnTamil: {
-    fontFamily: "'Noto Sans Tamil', sans-serif",
-    fontSize: 9,
-    color: 'inherit',
-    opacity: 0.7,
     lineHeight: 1,
   },
   explored: {

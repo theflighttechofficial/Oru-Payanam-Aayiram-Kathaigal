@@ -13,6 +13,7 @@ export function setMuted(v) {
   muted = v
   if (engineEl) engineEl.muted = v
   if (ambientMasterGain) ambientMasterGain.gain.value = v ? 0 : 1
+  if (radioMasterGain) radioMasterGain.gain.value = v ? 0 : (radioEnabled ? radioVolumeFrac : 0)
 }
 export function isMuted() { return muted }
 
@@ -57,82 +58,10 @@ export function playIndicatorTick() {
   tone(1200, 0.045, 'square', 0.04)
 }
 
-// ── Diesel bus starter + ignition ──
-// Starter motor grind (rough rhythmic cranks) -> engine catches -> settles.
-export function playEngineStart() {
-  if (muted) return
-  const c = getCtx()
-  const t0 = c.currentTime
-
-  // Starter motor: 3 rough cranking pulses (noise through a low bandpass + a grinding tone)
-  const noise = getNoiseBuffer(c)
-  for (let i = 0; i < 3; i++) {
-    const start = t0 + i * 0.22
-    const src = c.createBufferSource()
-    src.buffer = noise
-    const bp = c.createBiquadFilter()
-    bp.type = 'bandpass'
-    bp.frequency.value = 180
-    bp.Q.value = 2.2
-    const g = c.createGain()
-    g.gain.setValueAtTime(0, start)
-    g.gain.linearRampToValueAtTime(0.22, start + 0.03)
-    g.gain.exponentialRampToValueAtTime(0.001, start + 0.16)
-    src.connect(bp).connect(g).connect(c.destination)
-    src.start(start)
-    src.stop(start + 0.18)
-
-    const crank = c.createOscillator()
-    crank.type = 'square'
-    crank.frequency.setValueAtTime(50, start)
-    crank.frequency.exponentialRampToValueAtTime(70, start + 0.15)
-    const cg = c.createGain()
-    cg.gain.setValueAtTime(0, start)
-    cg.gain.linearRampToValueAtTime(0.1, start + 0.02)
-    cg.gain.exponentialRampToValueAtTime(0.001, start + 0.16)
-    crank.connect(cg).connect(c.destination)
-    crank.start(start)
-    crank.stop(start + 0.18)
-  }
-
-  // Engine catches ~0.75s in: low rumble sweeps up then settles, with diesel clatter
-  const catchT = t0 + 0.75
-  const osc = c.createOscillator()
-  const osc2 = c.createOscillator()
-  osc.type = 'sawtooth'
-  osc2.type = 'sawtooth'
-  osc.frequency.setValueAtTime(140, catchT)
-  osc.frequency.exponentialRampToValueAtTime(60, catchT + 0.5)
-  osc.frequency.exponentialRampToValueAtTime(46, catchT + 1.0)
-  osc2.frequency.setValueAtTime(142, catchT)
-  osc2.frequency.exponentialRampToValueAtTime(63, catchT + 0.5)
-  osc2.frequency.exponentialRampToValueAtTime(48, catchT + 1.0)
-  const g = c.createGain()
-  g.gain.setValueAtTime(0, catchT)
-  g.gain.linearRampToValueAtTime(0.16, catchT + 0.1)
-  g.gain.linearRampToValueAtTime(0.07, catchT + 1.0)
-  g.gain.exponentialRampToValueAtTime(0.001, catchT + 1.3)
-  osc.connect(g)
-  osc2.connect(g)
-  g.connect(c.destination)
-  osc.start(catchT); osc.stop(catchT + 1.35)
-  osc2.start(catchT); osc2.stop(catchT + 1.35)
-
-  // Diesel clatter burst as it catches
-  const clatter = c.createBufferSource()
-  clatter.buffer = noise
-  const clatterFilter = c.createBiquadFilter()
-  clatterFilter.type = 'bandpass'
-  clatterFilter.frequency.value = 900
-  clatterFilter.Q.value = 0.8
-  const clatterGain = c.createGain()
-  clatterGain.gain.setValueAtTime(0, catchT)
-  clatterGain.gain.linearRampToValueAtTime(0.06, catchT + 0.08)
-  clatterGain.gain.exponentialRampToValueAtTime(0.001, catchT + 0.9)
-  clatter.connect(clatterFilter).connect(clatterGain).connect(c.destination)
-  clatter.start(catchT)
-  clatter.stop(catchT + 0.95)
-}
+// ── Diesel bus ignition ──
+// Per user request, the only startup/idle sound is the real recorded diesel
+// bus loop (public/audio/engine-idle.mp3) — see startEngineHum below. No
+// synthesized crank/catch effect is layered on top of it.
 
 export function playEngineRev() {
   tone(65, 0.5, 'sawtooth', 0.1)
@@ -283,6 +212,142 @@ function applyAmbientProfile(routeId) {
   ambientGain.gain.cancelScheduledValues(c.currentTime)
   ambientGain.gain.linearRampToValueAtTime(p.level, c.currentTime + 1.2)
   scheduleAmbientEvents(routeId)
+}
+
+// ── FM radio — synthesized retro station tone (pad + static hiss + slow
+// melodic drift), one profile per RADIO_STATIONS entry. There's no real
+// licensed song audio bundled, so this stands in as an audible "on-air" bed
+// that actually plays instead of the dial sitting silently.
+const STATION_PROFILE = [
+  { base: 220, wave: 'triangle', detune: 6,  filterFreq: 1400, level: 0.05 },
+  { base: 262, wave: 'sine',     detune: 4,  filterFreq: 1100, level: 0.045 },
+  { base: 196, wave: 'triangle', detune: 8,  filterFreq: 1600, level: 0.05 },
+  { base: 294, wave: 'sawtooth', detune: 5,  filterFreq: 1300, level: 0.035 },
+  { base: 175, wave: 'sine',     detune: 3,  filterFreq: 900,  level: 0.045 },
+  { base: 233, wave: 'triangle', detune: 10, filterFreq: 1800, level: 0.04 },
+]
+
+let radioMasterGain = null
+let radioOscA = null
+let radioOscB = null
+let radioToneGain = null
+let radioToneFilter = null
+let radioLFO = null
+let radioStaticGain = null
+let radioVolumeFrac = 0.75
+let radioEnabled = false
+let radioMelodyTimeout = null
+
+function ensureRadioBase(c) {
+  if (radioMasterGain) return
+  radioMasterGain = c.createGain()
+  radioMasterGain.gain.value = 0
+  radioMasterGain.connect(c.destination)
+
+  // Static hiss bed
+  const noise = getNoiseBuffer(c)
+  const staticSrc = c.createBufferSource()
+  staticSrc.buffer = noise
+  staticSrc.loop = true
+  const staticFilter = c.createBiquadFilter()
+  staticFilter.type = 'highpass'
+  staticFilter.frequency.value = 4000
+  radioStaticGain = c.createGain()
+  radioStaticGain.gain.value = 0.015
+  staticSrc.connect(staticFilter).connect(radioStaticGain).connect(radioMasterGain)
+  staticSrc.start()
+
+  // Tonal "music" pad — two slightly detuned oscillators through a filter
+  radioOscA = c.createOscillator()
+  radioOscB = c.createOscillator()
+  radioToneFilter = c.createBiquadFilter()
+  radioToneFilter.type = 'lowpass'
+  radioToneGain = c.createGain()
+  radioToneGain.gain.value = 0
+  radioOscA.connect(radioToneFilter)
+  radioOscB.connect(radioToneFilter)
+  radioToneFilter.connect(radioToneGain).connect(radioMasterGain)
+  radioOscA.start()
+  radioOscB.start()
+
+  // Slow LFO breathing on the filter cutoff, so the pad feels alive
+  radioLFO = c.createOscillator()
+  radioLFO.frequency.value = 0.12
+  const lfoGain = c.createGain()
+  lfoGain.gain.value = 200
+  radioLFO.connect(lfoGain).connect(radioToneFilter.frequency)
+  radioLFO.start()
+}
+
+// Gentle wandering melody: re-picks a note within the station's scale every
+// few seconds so the pad doesn't sit on one dead pitch.
+function scheduleRadioMelody(profile) {
+  clearTimeout(radioMelodyTimeout)
+  if (!radioEnabled) return
+  const c = getCtx()
+  const steps = [0, 2, 3, 5, 7, 8, 10]
+  const semis = steps[Math.floor(Math.random() * steps.length)]
+  const freq = profile.base * Math.pow(2, semis / 12)
+  const t = c.currentTime
+  radioOscA.frequency.cancelScheduledValues(t)
+  radioOscB.frequency.cancelScheduledValues(t)
+  radioOscA.frequency.linearRampToValueAtTime(freq, t + 1.2)
+  radioOscB.frequency.linearRampToValueAtTime(freq * Math.pow(2, profile.detune / 1200), t + 1.2)
+  radioMelodyTimeout = setTimeout(() => scheduleRadioMelody(profile), 2200 + Math.random() * 1800)
+}
+
+export function startRadio(stationIdx) {
+  const c = getCtx()
+  ensureRadioBase(c)
+  radioEnabled = true
+  const profile = STATION_PROFILE[stationIdx] || STATION_PROFILE[0]
+  radioOscA.type = profile.wave
+  radioOscB.type = profile.wave
+  radioToneFilter.frequency.cancelScheduledValues(c.currentTime)
+  radioToneFilter.frequency.setValueAtTime(profile.filterFreq, c.currentTime)
+  scheduleRadioMelody(profile)
+  const target = muted ? 0 : profile.level * radioVolumeFrac
+  radioToneGain.gain.cancelScheduledValues(c.currentTime)
+  radioToneGain.gain.linearRampToValueAtTime(profile.level, c.currentTime + 0.4)
+  radioMasterGain.gain.cancelScheduledValues(c.currentTime)
+  radioMasterGain.gain.linearRampToValueAtTime(muted ? 0 : radioVolumeFrac, c.currentTime + 0.4)
+}
+
+export function stopRadio() {
+  radioEnabled = false
+  clearTimeout(radioMelodyTimeout)
+  if (!radioMasterGain) return
+  const c = getCtx()
+  radioMasterGain.gain.cancelScheduledValues(c.currentTime)
+  radioMasterGain.gain.linearRampToValueAtTime(0, c.currentTime + 0.3)
+}
+
+// Brief scanning-static burst, played when the dial is tuned to a new station.
+export function tuneRadio(stationIdx) {
+  if (!muted) {
+    const c = getCtx()
+    const src = c.createBufferSource()
+    src.buffer = getNoiseBuffer(c)
+    const f = c.createBiquadFilter()
+    f.type = 'bandpass'
+    f.frequency.setValueAtTime(600, c.currentTime)
+    f.frequency.linearRampToValueAtTime(4000, c.currentTime + 0.18)
+    const g = c.createGain()
+    g.gain.setValueAtTime(0.06, c.currentTime)
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.2)
+    src.connect(f).connect(g).connect(c.destination)
+    src.start()
+    src.stop(c.currentTime + 0.22)
+  }
+  if (radioEnabled) startRadio(stationIdx)
+}
+
+export function setRadioVolume(v) {
+  radioVolumeFrac = Math.max(0, Math.min(1, v / 100))
+  if (!radioMasterGain || !radioEnabled) return
+  const c = getCtx()
+  radioMasterGain.gain.cancelScheduledValues(c.currentTime)
+  radioMasterGain.gain.linearRampToValueAtTime(muted ? 0 : radioVolumeFrac, c.currentTime + 0.1)
 }
 
 // Called whenever the current route changes — crossfades the ambient bed.

@@ -157,7 +157,11 @@ export const TAPES = [
     labelEng: 'Ilaiyaraaja Gold',
     side: 'A', era: '1980s',
     color: '#1a2a1a', accent: '#D89B24',
-    ytPlaylistId: 'PLACEHOLDER_ILAIYARAJA',
+    ytPlaylistId: 'PL0rVrRHZm_D5u3Oj8VaB1Jofd2h2QbwjD',
+    // The YouTube playlist page's "index=" URL param is 1-based; the IFrame
+    // Player API's loadPlaylist({ index }) is 0-based — subtract 1 when
+    // copying a start index from a youtube.com playlist URL.
+    ytStartIndex: 8,
     tracks: ['Roja Kaadhal', 'Poove Sempoove', 'En Iniya Pon Nilave', 'Ninaithale Inikkum'],
   },
   {
@@ -166,16 +170,16 @@ export const TAPES = [
     labelEng: 'A.R. Rahman Hits',
     side: 'A', era: '1990s',
     color: '#1a1a2a', accent: '#8C3026',
-    ytPlaylistId: 'PLACEHOLDER_ARR',
+    ytPlaylistId: 'PL0rVrRHZm_D7TLwbDdZPzaWzhbFyaGS-H',
     tracks: ['Roja Title', 'Mustafa Mustafa', 'Uyire', 'Kadhal Rojave'],
   },
   {
     id: 'tape-msv',
-    label: 'எம்.எஸ்.வி கிளாசிக்',
-    labelEng: 'MSV Classics',
-    side: 'A', era: '1960s',
+    label: 'ஹாரிஸ் ரேடியோ',
+    labelEng: 'Harris Radio',
+    side: 'A', era: '2000s',
     color: '#2a1a1a', accent: '#315A42',
-    ytPlaylistId: 'PLACEHOLDER_MSV',
+    ytPlaylistId: 'PLp9ncFa0OT_hNJNHxrhqQA5-unkpstvdA',
     tracks: ['Aayirathil Oruvan', 'Annaamalai', 'Kavalkaran'],
   },
   {

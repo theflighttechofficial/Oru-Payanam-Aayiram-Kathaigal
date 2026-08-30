@@ -5,10 +5,10 @@ import { RADIO_STATIONS, SONGS } from '../data/routes'
 // Scrolling marquee bar, fixed to the very top. CSS-only animation (no JS
 // timers) so it stays smooth regardless of main-thread load.
 export default function TopTicker({ route }) {
-  const { deckTape, currentTrackIndex, activeTape, playerMode, radioStation, isPlaying, radioPlaying } = useStore()
+  const { activeTape, nowPlayingTitle, playerMode, radioStation, isPlaying, radioPlaying } = useStore()
 
   const trackName = playerMode === 'tape' && activeTape
-    ? activeTape.tracks[currentTrackIndex]
+    ? (nowPlayingTitle || 'Loading…')
     : SONGS[radioStation]
   const source = playerMode === 'tape' && activeTape ? activeTape.labelEng : RADIO_STATIONS[radioStation].name
   const playing = playerMode === 'tape' ? isPlaying : radioPlaying

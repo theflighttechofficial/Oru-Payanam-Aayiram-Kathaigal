@@ -51,23 +51,23 @@ html, body, #root {
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
 }
 
-/* Road sits just above the bottom dashboard panel on desktop; flush to the
-   bottom on mobile, where the dashboard panel is hidden in favour of MobileBar */
+/* Road sits just above the bottom cassette bar on desktop; flush to the
+   bottom on mobile, where that bar is hidden in favour of MobileBar */
 .road-raise { bottom: 0; }
 @media (min-width: 821px) {
-  .road-raise { bottom: 230px; }
+  .road-raise { bottom: 64px; }
 }
 
 /* Bottom-anchored panels sit at their original offset on mobile (where the
-   dashboard panel is hidden), and rise above the 230px dashboard on desktop */
+   cassette bar is hidden), and rise just above it on desktop */
 .dash-wrap, .dash-wrap-center, .dash-wrap-right { bottom: 16px; }
 .dash-wrap-left { bottom: 96px; }
 @media (min-width: 821px) {
-  .dash-wrap, .dash-wrap-center, .dash-wrap-right { bottom: 246px; }
-  .dash-wrap-left { bottom: 326px; }
+  .dash-wrap, .dash-wrap-center, .dash-wrap-right { bottom: 80px; }
+  .dash-wrap-left { bottom: 160px; }
 }
 
 .bus-wrap-raise { bottom: 78px; }
 @media (min-width: 821px) {
-  .bus-wrap-raise { bottom: 250px; }
+  .bus-wrap-raise { bottom: 80px; }
 }

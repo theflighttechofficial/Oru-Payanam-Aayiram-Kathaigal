@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react'
 import useStore from './store/useStore'
 import { ROUTES } from './data/routes'
 
-import Sky        from './components/Sky'
 import NightScene from './components/NightScene'
 import Road       from './components/Road'
 import TNSTCBus   from './components/TNSTCBus'
@@ -16,7 +15,6 @@ import HornButton       from './components/HornButton'
 import RouteInfoOverlay from './components/RouteInfoOverlay'
 import Dashboard        from './components/Dashboard'
 import Intro            from './components/Intro'
-import MemoryRack       from './components/MemoryRack'
 import Kolam            from './components/Kolam'
 import MobileBar        from './components/MobileBar'
 import CRTOverlay       from './components/CRTOverlay'
@@ -29,12 +27,24 @@ const REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia
   : false
 
 export default function App() {
-  const { currentRoute, transitioning, transitPhase, hornPressed, pressHorn, booted, devMode, toggleDevMode, engineOn, headlightsOn, speed, radioPlaying, muted, showTapeRack, toggleTapeRack } = useStore()
+  const {
+    currentRoute, transitioning, transitPhase, hornPressed, pressHorn, booted, devMode, toggleDevMode,
+    engineOn, headlightsOn, speed, radioPlaying, isPlaying, muted, showTapeRack, toggleTapeRack,
+    busHidden, toggleBusHidden,
+  } = useStore()
   const route   = ROUTES[currentRoute]
   const appRef  = useRef()
   const busRef  = useRef()
-  const [parallax, setParallax] = useState({ x: 0, y: 0 })
   const [fullscreen, setFullscreen] = useState(false)
+  const [showFsHint, setShowFsHint] = useState(false)
+  const musicPlaying = radioPlaying || isPlaying
+
+  // Fullscreen hint — floats in a few seconds after boot, once per visit
+  useEffect(() => {
+    if (!booted || fullscreen) return
+    const t = setTimeout(() => setShowFsHint(true), 4000)
+    return () => clearTimeout(t)
+  }, [booted, fullscreen])
 
   // Keyboard: H = horn, D = dev overlay, F = fullscreen
   useEffect(() => {
@@ -46,18 +56,6 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [pressHorn, toggleDevMode])
 
-  // Mouse parallax (desktop only, skipped under reduced-motion)
-  useEffect(() => {
-    if (REDUCED_MOTION) return
-    const onMove = (e) => {
-      const nx = (e.clientX / window.innerWidth - 0.5)
-      const ny = (e.clientY / window.innerHeight - 0.5)
-      setParallax({ x: nx, y: ny })
-    }
-    window.addEventListener('mousemove', onMove)
-    return () => window.removeEventListener('mousemove', onMove)
-  }, [])
-
   useEffect(() => {
     const onFsChange = () => setFullscreen(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', onFsChange)
@@ -67,6 +65,7 @@ export default function App() {
   const enterFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen()
     else appRef.current?.requestFullscreen?.()
+    setShowFsHint(false)
   }
 
   // Shake on crank — scoped to the bus itself, background stays still
@@ -91,10 +90,6 @@ export default function App() {
     }
   }, [hornPressed])
 
-  const px = (factor) => REDUCED_MOTION ? {} : {
-    transform: `translate(${parallax.x * factor * 40}px, ${parallax.y * factor * 40}px)`,
-  }
-
   return (
     <>
       <GlobalCSS />
@@ -108,34 +103,27 @@ export default function App() {
       }} />
       <div ref={appRef} style={styles.root}>
 
-        {/* ── LAYER -1: Painted background — the full illustrated scene behind everything ── */}
+        {/* ── LAYER -1: Painted background — the supplied artwork, full-bleed and clearly visible ── */}
         <PaintedBackground route={route} />
 
-        {/* ── LAYER 0: Sky — thin atmospheric tint over the painted scene ── */}
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.5, zIndex: 0 }}>
-          <Sky route={route} />
-        </div>
-
-        {/* ── LAYER 1: Stars ── */}
-        <div style={{ position: 'absolute', inset: 0, transition: 'transform 0.1s ease-out', ...px(0.5) }}>
-          <Stars />
-        </div>
-
-        {/* ── LAYER 2: Illustrated interactive scene — dimmed so the painted background reads through ── */}
-        <div style={{ position: 'absolute', inset: 0, opacity: 0.6, transition: 'transform 0.1s ease-out, opacity 0.3s', ...px(1.2) }}>
+        {/* ── LAYER 2: Interactive hotspots (temple bell, tea shop, cinema poster) — near-invisible,
+             the painted background already supplies the visuals; this just keeps the clicks alive ── */}
+        <div style={{ position: 'absolute', inset: 0, opacity: 0.06 }}>
           <NightScene route={route} />
         </div>
 
         {/* ── LAYER 3: Road — raised on desktop to sit just above the bottom dashboard panel ── */}
-        <div className="road-raise" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-          <Road />
-        </div>
+        {!busHidden && (
+          <div className="road-raise" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+            <Road />
+          </div>
+        )}
 
         {/* ── KOLAM — self-drawing doorstep pattern, fades after intro ── */}
         <Kolam />
 
-        {/* ── TITLE — huge illuminated sign, top of world ── */}
-        <div style={{ ...styles.titleWrap, transition: 'transform 0.1s ease-out', ...px(0.8) }}>
+        {/* ── TITLE — huge illuminated sign, top of world, static ── */}
+        <div style={styles.titleWrap}>
           <div style={styles.titleTamil}>தமிழ்நாடு</div>
           <div style={styles.titleEng}>TAMIZH NĀDU</div>
           <div style={styles.tagline}>ஒரு பயணம். ஆயிரம் கதைகள்.</div>
@@ -143,19 +131,38 @@ export default function App() {
 
         {/* ── LAYER 4: TNSTC BUS — centrepiece. Fixed in place (no mouse parallax) —
              motion comes from the road scrolling under it, wheels spinning, and body vibration. ── */}
-        <div ref={busRef} className="bus-wrap-raise" style={{
-          ...styles.busWrap,
-          animation: REDUCED_MOTION ? 'none'
-            : transitPhase === 'moving' ? 'busVibrate 0.16s linear infinite'
-            : transitPhase === 'idle' ? 'floatBus 4.5s ease-in-out infinite'
-            : 'none',
-        }}>
-          <TNSTCBus route={route} moving={transitPhase === 'moving'} />
-        </div>
+        {!busHidden && (
+          <div ref={busRef} className="bus-wrap-raise" style={{
+            ...styles.busWrap,
+            // The bus is always subtly alive — floating at rest, vibrating while moving —
+            // it never goes fully static except under prefers-reduced-motion.
+            animation: REDUCED_MOTION ? 'none'
+              : transitPhase === 'moving' ? 'busVibrate 0.16s linear infinite'
+              : 'floatBus 4.5s ease-in-out infinite',
+          }}>
+            <TNSTCBus route={route} moving={transitPhase === 'moving'} />
+          </div>
+        )}
+
+        {/* ── UI: Hide-the-bus toggle — surfaces while music is playing, so the scene can be enjoyed unobstructed ── */}
+        {musicPlaying && (
+          <button style={styles.hideBusBtn} onClick={toggleBusHidden} title={busHidden ? 'Show bus' : 'Hide bus'}>
+            {busHidden ? '🚌 Show bus' : '🙈 Hide bus'}
+          </button>
+        )}
 
         {/* ── HEADLIGHT CONE ── */}
-        {(transitPhase === 'cranking' || transitPhase === 'moving') && (
+        {!busHidden && (transitPhase === 'cranking' || transitPhase === 'moving') && (
           <div style={styles.headlightCone} />
+        )}
+
+        {/* ── Floating notification: nudge toward fullscreen for the full ambience ── */}
+        {showFsHint && !fullscreen && (
+          <div style={styles.fsHint}>
+            <span style={styles.fsHintText}>🌙 Go fullscreen to feel the real environment</span>
+            <button style={styles.fsHintBtn} onClick={enterFullscreen}>Go fullscreen</button>
+            <button style={styles.fsHintClose} onClick={() => setShowFsHint(false)}>✕</button>
+          </div>
         )}
 
         {/* ── TRANSITION OVERLAY ── */}
@@ -182,10 +189,7 @@ export default function App() {
         <HornButton />
 
         {/* ── UI: Dashboard (ignition / lights / indicators / sound) ── */}
-        <Dashboard />
-
-        {/* ── UI: Memory Rack (collectible route cassettes) ── */}
-        <MemoryRack />
+        {!busHidden && <Dashboard />}
 
         {/* ── UI: Tape Rack (music tapes + region cassettes, toggled from the deck) ── */}
         <TapeRack />
@@ -319,6 +323,14 @@ function GlobalCSS() {
         from { transform: rotate(0deg); }
         to   { transform: rotate(360deg); }
       }
+      @keyframes hubSpin {
+        from { transform: rotate(0deg); }
+        to   { transform: rotate(360deg); }
+      }
+      @keyframes headlightFlicker {
+        0%, 100% { opacity: 0.3; }
+        50%      { opacity: 0.9; }
+      }
       @keyframes floatBus {
         0%,100% { transform: translateX(-50%) translateY(0px);   }
         50%     { transform: translateX(-50%) translateY(-4px);   }
@@ -378,18 +390,17 @@ const styles = {
   },
   titleWrap: {
     position: 'absolute',
-    top: 34,
-    left: '50%',
-    transform: 'translateX(-50%)',
+    top: 30,
+    left: 28,
     zIndex: 4,
-    textAlign: 'center',
+    textAlign: 'left',
     pointerEvents: 'none',
     textShadow: '0 0 30px rgba(216,155,36,0.35), 0 2px 6px rgba(0,0,0,0.8)',
   },
   titleTamil: {
     fontFamily: "'Noto Sans Tamil', sans-serif",
     fontWeight: 700,
-    fontSize: 'clamp(28px, 4.2vw, 58px)',
+    fontSize: 'clamp(24px, 3.4vw, 46px)',
     color: '#F5EDD6',
     letterSpacing: 2,
     lineHeight: 1,
@@ -397,10 +408,10 @@ const styles = {
   titleEng: {
     fontFamily: "'Baloo Thambi 2', sans-serif",
     fontWeight: 800,
-    fontSize: 'clamp(14px, 1.8vw, 24px)',
+    fontSize: 'clamp(12px, 1.5vw, 19px)',
     color: '#D89B24',
-    letterSpacing: 10,
-    lineHeight: 1.6,
+    letterSpacing: 8,
+    lineHeight: 1.4,
   },
   tagline: {
     fontFamily: "'Noto Sans Tamil', sans-serif",
@@ -413,9 +424,65 @@ const styles = {
     position: 'absolute',
     left: '50%',
     transform: 'translateX(-50%)',
-    width: 'min(1760px, 84vw)',
+    width: 'min(1420px, 74vw)',
     zIndex: 10,
     filter: 'drop-shadow(0 30px 50px rgba(0,0,0,0.6))',
+  },
+  hideBusBtn: {
+    position: 'absolute',
+    bottom: 170,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: 'rgba(8,8,8,0.8)',
+    border: '1px solid rgba(216,155,36,0.3)',
+    borderRadius: 20,
+    padding: '6px 16px',
+    color: '#D89B24',
+    fontFamily: "'Courier Prime', monospace",
+    fontSize: 11,
+    letterSpacing: 1,
+    cursor: 'pointer',
+    zIndex: 25,
+  },
+  fsHint: {
+    position: 'fixed',
+    bottom: 24,
+    right: 24,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    background: 'rgba(8,8,8,0.92)',
+    border: '1px solid rgba(216,155,36,0.4)',
+    borderRadius: 10,
+    padding: '10px 12px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+    zIndex: 95,
+    animation: 'arrivalSlide 0.4s ease',
+  },
+  fsHintText: {
+    fontFamily: "'Noto Sans Tamil', sans-serif",
+    fontSize: 12,
+    color: '#F5EDD6',
+    whiteSpace: 'nowrap',
+  },
+  fsHintBtn: {
+    background: '#D89B24',
+    color: '#0a0a0a',
+    border: 'none',
+    borderRadius: 6,
+    padding: '5px 10px',
+    fontFamily: "'Courier Prime', monospace",
+    fontSize: 10,
+    fontWeight: 700,
+    cursor: 'pointer',
+  },
+  fsHintClose: {
+    background: 'transparent',
+    border: 'none',
+    color: '#666',
+    fontSize: 12,
+    cursor: 'pointer',
+    padding: 2,
   },
   headlightCone: {
     position: 'absolute',
@@ -501,7 +568,7 @@ const styles = {
   },
   footer: {
     position: 'absolute',
-    bottom: 236,
+    bottom: 72,
     left: '50%',
     transform: 'translateX(-50%)',
     fontFamily: "'Courier Prime', monospace",
