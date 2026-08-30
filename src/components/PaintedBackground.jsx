@@ -22,7 +22,7 @@ const styles = {
   image: {
     position: 'absolute',
     inset: 0,
-    backgroundImage: 'url(/images/web-background.png)',
+    backgroundImage: 'url(/images/background2.png)',
     backgroundSize: 'cover',
     backgroundPosition: 'center 35%',
     backgroundRepeat: 'no-repeat',

@@ -6,7 +6,7 @@ const CHECKS = [
   'ROAD ...................... OK',
   'RADIO ..................... OK',
   'HEADLIGHTS ................ OK',
-  'MEMORY RACK ............... OK',
+  'TAPE RACK .................. OK',
 ]
 
 export default function Intro() {

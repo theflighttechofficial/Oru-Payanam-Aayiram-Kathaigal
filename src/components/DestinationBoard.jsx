@@ -49,8 +49,8 @@ export default function DestinationBoard({ route }) {
         <span style={styles.ledLabel}>VLP</span>
       </div>
 
-      {/* Nudge toward the radio/cassette bar at the bottom of the screen */}
-      <div style={styles.musicHint}>🎵 கீழே உள்ள பட்டியில் இருந்து பாடல் கேளுங்கள் — play music from the bottom bar</div>
+      {/* Nudge toward hiding the bus and playing music for the full nostalgic feel */}
+      <div style={styles.musicHint}>🎵 பேருந்தை மறைத்து, கீழே உள்ள பட்டியில் இசையை இயக்கி பழைய நினைவுகளை மீட்டெடுங்கள் — hide the bus and play music from the player below to relive the nostalgia</div>
     </div>
   )
 }
@@ -76,13 +76,15 @@ const styles = {
     left: '50%',
     transform: 'translateX(-50%)',
     marginTop: 8,
-    whiteSpace: 'nowrap',
+    width: 'min(90vw, 560px)',
+    textAlign: 'center',
     fontFamily: "'Noto Sans Tamil', sans-serif",
     fontSize: 14,
     fontWeight: 600,
     color: '#D89B24',
     opacity: 0.9,
     letterSpacing: 0.5,
+    lineHeight: 1.4,
     pointerEvents: 'none',
     textShadow: '0 0 10px rgba(216,155,36,0.35), 0 2px 4px rgba(0,0,0,0.8)',
   },

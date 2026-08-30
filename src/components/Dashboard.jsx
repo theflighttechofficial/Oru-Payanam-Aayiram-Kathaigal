@@ -21,9 +21,15 @@ export default function Dashboard() {
           <span style={styles.gaugeUnit}>fuel</span>
         </div>
       </div>
+      {!engineOn && (
+        <div style={styles.ignCallout}>
+          <span style={styles.ignCalloutText}>start engine from here</span>
+          <span style={styles.ignArrow}>↓</span>
+        </div>
+      )}
       <div style={styles.row}>
         <Switch label="IGN" sub="என்ஜின்" on={engineOn} onClick={toggleEngine} activeColor="#F3C94B" />
-        <Switch label="HEAD" sub="விளக்கு" on={headlightsOn} onClick={toggleHeadlights} activeColor="#FFF3C0" disabled={!engineOn && !headlightsOn ? false : false} />
+        <Switch label="HEAD" sub="விளக்கு" on={headlightsOn} onClick={toggleHeadlights} activeColor="#FFF3C0" />
         <Switch label="◀ IND" sub="இடது" on={leftIndicatorOn} onClick={() => toggleIndicator('left')} activeColor="#FFA500" />
         <Switch label="IND ▶" sub="வலது" on={rightIndicatorOn} onClick={() => toggleIndicator('right')} activeColor="#FFA500" />
         <Switch label={muted ? 'MUTE' : 'SND'} sub={muted ? 'அமைதி' : 'ஒலி'} on={!muted} onClick={toggleMute} activeColor="#7acca0" />
@@ -63,6 +69,39 @@ const styles = {
     borderRadius: 8,
     padding: '8px 10px',
     boxShadow: '0 6px 20px rgba(0,0,0,0.5)',
+  },
+  ignCallout: {
+    position: 'absolute',
+    top: -46,
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 150,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    animation: 'floatBus 1.6s ease-in-out infinite',
+    pointerEvents: 'none',
+  },
+  ignCalloutText: {
+    fontFamily: "'Courier Prime', monospace",
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#F3C94B',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    lineHeight: 1.3,
+    background: 'rgba(8,8,8,0.9)',
+    border: '1px solid rgba(243,201,75,0.5)',
+    borderRadius: 4,
+    padding: '3px 6px',
+    textShadow: '0 0 8px rgba(243,201,75,0.5)',
+  },
+  ignArrow: {
+    fontSize: 14,
+    color: '#F3C94B',
+    lineHeight: 1,
+    marginTop: 1,
+    textShadow: '0 0 8px rgba(243,201,75,0.6)',
   },
   label: {
     fontFamily: "'Courier Prime', monospace",
