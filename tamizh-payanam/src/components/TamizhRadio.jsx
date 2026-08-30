@@ -9,7 +9,7 @@ export default function TamizhRadio() {
     radioStation, setRadioStation, radioPlaying, toggleRadio, showToast,
     activeTape, deckTape, isPlaying, setPlaying, nowPlayingTitle, setNowPlaying,
     volume, setVolume, playerMode, setPlayerMode, playerReady, setPlayerReady, ejectTape,
-    toggleTapeRack, pressHorn,
+    toggleTapeRack, busHidden,
   } = useStore()
 
   const [ejecting, setEjecting] = useState(false)
@@ -110,6 +110,15 @@ export default function TamizhRadio() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckTape, playerReady])
 
+  // Hiding the bus is meant to power everything down — pause the actual
+  // YouTube tape audio too, which the store can't reach directly since this
+  // component owns the player instance.
+  useEffect(() => {
+    if (busHidden && ytPlayerRef.current && isPlaying) {
+      try { ytPlayerRef.current.pauseVideo() } catch (err) {}
+    }
+  }, [busHidden, isPlaying])
+
   useEffect(() => {
     clearInterval(progressTimerRef.current)
     if (isPlaying && playerReady && ytPlayerRef.current) {
@@ -192,11 +201,6 @@ export default function TamizhRadio() {
   }, [onKnobMouseMove])
   const knobAngle = (volume / 100) * 270 - 135
 
-  const handleHornBar = () => {
-    pressHorn()
-    showToast('📯 கோவிந்தா! HORN OK PLEASE!')
-  }
-
   const fmt = (s) => {
     if (!isFinite(s) || s < 0) s = 0
     return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`
@@ -210,13 +214,15 @@ export default function TamizhRadio() {
     <div className="desktop-only" style={styles.wrap}>
       <div ref={hiddenPlayerRef} style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
 
-      {/* Mode toggle */}
-      <button style={{ ...styles.modeBtn, ...(playerMode === 'tape' ? styles.modeBtnActive : {}) }}
-        onClick={() => { playClick(); setPlayerMode('tape') }}>TAPE</button>
-      <button style={{ ...styles.modeBtn, ...(playerMode === 'radio' ? styles.modeBtnActive : {}) }}
-        onClick={() => { playClick(); setPlayerMode('radio') }}>FM</button>
+      {/* Brushed-metal trim line, classic portable-receiver styling */}
+      <div style={styles.trimLine} />
 
-      {/* Reels — only shown in tape mode */}
+      {/* Speaker grille — perforated panel, left end of the set */}
+      <div style={styles.grille}>
+        {Array.from({ length: 24 }).map((_, i) => <span key={i} style={styles.grilleDot} />)}
+      </div>
+
+      {/* Reels — only shown in tape mode, set into the metal panel */}
       {playerMode === 'tape' && (
         <div style={{ ...styles.tapeSlot, animation: ejecting ? 'cassetteEject 0.4s ease forwards' : 'none' }}>
           <Reel spinning={isPlaying} />
@@ -224,25 +230,37 @@ export default function TamizhRadio() {
         </div>
       )}
 
-      {/* Display */}
-      <div style={styles.display} onClick={playerMode === 'tape' ? handleScrub : undefined}>
-        {playerMode === 'tape' ? (
-          deckTape ? (
-            <>
-              <div style={styles.trackName}>{deckTape.labelEng} — {trackName}</div>
-              <div style={styles.scrubTrack}><div style={{ ...styles.scrubFill, width: `${progressPct}%` }} /></div>
-            </>
-          ) : (
-            <div style={styles.trackName}>NO TAPE — OPEN RACK ▤</div>
-          )
-        ) : (
-          <div style={styles.trackName}>
-            <span style={{ color: station.color }}>{station.freq}</span> · {song}
-          </div>
-        )}
+      {/* Band select — TAPE / FM, styled like a receiver's band switch */}
+      <div style={styles.bandSwitch}>
+        <button style={{ ...styles.bandBtn, ...(playerMode === 'tape' ? styles.bandBtnActive : {}) }}
+          onClick={() => { playClick(); setPlayerMode('tape') }}>TAPE</button>
+        <button style={{ ...styles.bandBtn, ...(playerMode === 'radio' ? styles.bandBtnActive : {}) }}
+          onClick={() => { playClick(); setPlayerMode('radio') }}>FM</button>
       </div>
 
-      {/* Transport — compact icon row */}
+      {/* LCD display — recessed glass, backlit digital readout */}
+      <div style={styles.lcdBezel}>
+        <div style={styles.lcd} onClick={playerMode === 'tape' ? handleScrub : undefined}>
+          <div style={styles.lcdTopRow}>
+            <span style={styles.lcdBand}>{playerMode === 'tape' ? 'TAPE' : station.freq}</span>
+            <span style={{ ...styles.lcdDot, opacity: playing ? 1 : 0.25 }}>● {playing ? 'PLAY' : 'STOP'}</span>
+          </div>
+          {playerMode === 'tape' ? (
+            deckTape ? (
+              <>
+                <div style={styles.lcdTrack}>{deckTape.labelEng} — {trackName}</div>
+                <div style={styles.scrubTrack}><div style={{ ...styles.scrubFill, width: `${progressPct}%` }} /></div>
+              </>
+            ) : (
+              <div style={styles.lcdTrack}>NO TAPE — OPEN RACK ▤</div>
+            )
+          ) : (
+            <div style={styles.lcdTrack}>{song}</div>
+          )}
+        </div>
+      </div>
+
+      {/* Transport — compact icon row, dark control cluster */}
       <div style={styles.transport}>
         <IconBtn label="⏪" onClick={() => { playClick(); playerMode === 'radio' ? tuneStation(-1) : handleSeek(-10) }} title="Rewind" />
         {playerMode === 'tape' && <IconBtn label="⏮" onClick={() => handleSkip(-1)} title="Previous track" />}
@@ -252,16 +270,24 @@ export default function TamizhRadio() {
         {playerMode === 'tape' && <IconBtn label="⏏" onClick={handleEject} title="Eject" />}
       </div>
 
-      {/* Volume knob */}
-      <div style={styles.knob} onMouseDown={onKnobMouseDown} title="Drag to adjust volume">
-        <div style={{ ...styles.knobMark, transform: `translateX(-50%) rotate(${knobAngle}deg)` }} />
+      {/* Tuning/volume dial assembly, with telescoping-antenna accent behind it */}
+      <div style={styles.dialAssembly}>
+        <div style={styles.antenna} />
+        <div style={styles.knobRing}>
+          <div style={styles.knob} onMouseDown={onKnobMouseDown} title="Drag to adjust volume">
+            <div style={{ ...styles.knobMark, transform: `translateX(-50%) rotate(${knobAngle}deg)` }} />
+          </div>
+        </div>
+        <span style={styles.volLabel}>VOL {Math.round(volume)}</span>
       </div>
-      <span style={styles.volLabel}>{Math.round(volume)}%</span>
 
       <button style={styles.rackBtn} onClick={() => { playClick(); toggleTapeRack() }}>TAPE RACK ▤</button>
 
-      {/* Horn */}
-      <button style={styles.hornBtn} onClick={handleHornBar}>★ HORN OK PLEASE ★</button>
+      {/* Unit nameplate — engraved-style badge, right end of the set */}
+      <div style={styles.namePlate}>
+        <span style={styles.namePlateBrand}>SONY</span>
+        <span style={styles.namePlateModel}>ICF-SW7600</span>
+      </div>
     </div>
   )
 }
@@ -282,26 +308,53 @@ function Reel({ spinning }) {
   )
 }
 
+// Retro portable shortwave-receiver styling — brushed silver/graphite body,
+// perforated speaker grille, recessed LCD glass, and a chunky tuning dial
+// with a telescoping-antenna accent, in place of the old flat toolbar look.
 const styles = {
   wrap: {
     position: 'absolute',
     left: 0, right: 0, bottom: 0,
-    height: 64,
+    height: 78,
     zIndex: 45,
-    background: 'linear-gradient(180deg, #111 0%, #0a0a0a 100%)',
-    borderTop: '2px solid rgba(216,155,36,0.5)',
-    boxShadow: '0 -6px 24px rgba(0,0,0,0.6)',
+    background: 'linear-gradient(180deg, #4a4d52 0%, #34363a 38%, #232427 100%)',
+    borderTop: '1px solid #6a6d72',
+    boxShadow: '0 -10px 30px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.12)',
     padding: '0 16px',
     display: 'flex',
     alignItems: 'center',
     gap: 10,
   },
-  modeBtn: {
-    background: '#151515', border: '1px solid #333', borderRadius: 4,
-    color: '#666', fontFamily: "'Courier Prime', monospace", fontSize: 9,
-    padding: '5px 8px', cursor: 'pointer', letterSpacing: 1, flexShrink: 0,
+  trimLine: {
+    position: 'absolute', top: 6, left: 0, right: 0, height: 1,
+    background: 'linear-gradient(90deg, transparent, rgba(216,155,36,0.6) 15%, rgba(216,155,36,0.6) 85%, transparent)',
+    pointerEvents: 'none',
   },
-  modeBtnActive: { color: '#F3C94B', borderColor: '#D89B24' },
+  grille: {
+    flexShrink: 0, width: 46, height: 44, borderRadius: 4,
+    background: '#1c1d1f', border: '1px solid #0a0a0a',
+    boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.7)',
+    display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 2.5,
+    padding: 5, alignContent: 'center',
+  },
+  grilleDot: {
+    width: 3.5, height: 3.5, borderRadius: '50%',
+    background: 'radial-gradient(circle at 35% 30%, #4a4a4a, #0a0a0a)',
+  },
+  bandSwitch: {
+    display: 'flex', flexDirection: 'column', gap: 3, flexShrink: 0,
+  },
+  bandBtn: {
+    background: 'linear-gradient(180deg, #3a3c40 0%, #232427 100%)',
+    border: '1px solid #17181a', borderTop: '1px solid #5a5d62',
+    borderRadius: 3, color: '#9a9da2', fontFamily: "'Courier Prime', monospace", fontSize: 8,
+    padding: '3px 7px', cursor: 'pointer', letterSpacing: 1, fontWeight: 700,
+    boxShadow: '0 2px 0 #0a0a0a',
+  },
+  bandBtnActive: {
+    color: '#0a0a0a', background: 'linear-gradient(180deg, #F3C94B 0%, #D89B24 100%)',
+    borderTop: '1px solid #ffe9a8', boxShadow: '0 2px 0 #8a6414, 0 0 8px rgba(243,201,75,0.5)',
+  },
   tapeSlot: { display: 'flex', gap: 4, flexShrink: 0 },
   reel: {
     width: 20, height: 20, borderRadius: '50%',
@@ -313,30 +366,62 @@ const styles = {
     position: 'absolute', top: '50%', left: '50%', width: 6, height: 6,
     background: '#D89B24', borderRadius: '50%', transform: 'translate(-50%,-50%)',
   },
-  display: {
+  lcdBezel: {
     flex: 1, minWidth: 0,
-    background: '#020d02', border: '1px solid #0d2a0d', borderRadius: 4,
-    padding: '6px 10px', cursor: 'pointer',
+    background: 'linear-gradient(180deg, #17181a 0%, #0d0e0f 100%)',
+    borderRadius: 6, padding: 4,
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8), 0 1px 0 rgba(255,255,255,0.06)',
   },
-  trackName: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#3a8a3a',
-    textShadow: '0 0 8px rgba(58,138,58,0.5)',
+  lcd: {
+    background: 'linear-gradient(175deg, #b9c9a8 0%, #a9bc96 100%)',
+    borderRadius: 3, padding: '5px 10px', cursor: 'pointer',
+    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.35)',
+  },
+  lcdTopRow: {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2,
+  },
+  lcdBand: {
+    fontFamily: "'Courier Prime', monospace", fontSize: 9, fontWeight: 700,
+    color: '#2a3a1a', letterSpacing: 1,
+  },
+  lcdDot: {
+    fontFamily: "'Courier Prime', monospace", fontSize: 7, fontWeight: 700,
+    color: '#2a3a1a', letterSpacing: 1,
+  },
+  lcdTrack: {
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#1e2a12', fontWeight: 700,
     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
   },
-  scrubTrack: { height: 3, background: '#111', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
-  scrubFill: { height: '100%', background: '#D89B24', transition: 'width 0.3s linear' },
+  scrubTrack: { height: 3, background: 'rgba(30,42,18,0.25)', borderRadius: 2, marginTop: 4, overflow: 'hidden' },
+  scrubFill: { height: '100%', background: '#2a3a1a', transition: 'width 0.3s linear' },
   transport: { display: 'flex', gap: 4, flexShrink: 0 },
   iconBtn: {
-    width: 30, height: 30, borderRadius: 4,
-    background: '#151515', border: '1px solid #333', color: '#D89B24',
-    fontSize: 12, cursor: 'pointer', boxShadow: '0 3px 0 #0a0a0a',
+    width: 30, height: 30, borderRadius: '50%',
+    background: 'linear-gradient(180deg, #3a3c40 0%, #202124 100%)',
+    border: '1px solid #17181a', borderTop: '1px solid #5a5d62', color: '#D89B24',
+    fontSize: 12, cursor: 'pointer', boxShadow: '0 3px 0 #0a0a0a, inset 0 1px 0 rgba(255,255,255,0.08)',
     transition: 'box-shadow 0.1s ease, transform 0.1s ease',
   },
-  iconBtnActive: { color: '#F3C94B', borderColor: '#D89B24' },
+  iconBtnActive: { color: '#F3C94B', borderColor: '#5a5d62' },
+  dialAssembly: {
+    position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center',
+    flexShrink: 0, width: 60,
+  },
+  antenna: {
+    position: 'absolute', top: -34, right: 4, width: 2, height: 34,
+    background: 'linear-gradient(180deg, #8a8d92, #4a4d52)',
+    transform: 'rotate(18deg)', transformOrigin: 'bottom',
+    borderRadius: 1, pointerEvents: 'none',
+  },
+  knobRing: {
+    width: 38, height: 38, borderRadius: '50%',
+    background: 'linear-gradient(155deg, #8a8d92 0%, #4a4d52 55%, #2a2b2e 100%)',
+    padding: 3, boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+  },
   knob: {
-    width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+    width: '100%', height: '100%', borderRadius: '50%',
     background: 'radial-gradient(circle at 38% 35%, #666 0%, #2a2a2a 45%, #111 100%)',
-    border: '2px solid #333', position: 'relative', cursor: 'grab',
+    border: '2px solid #17181a', position: 'relative', cursor: 'grab',
     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.5)',
   },
   knobMark: {
@@ -344,18 +429,28 @@ const styles = {
     width: 2, height: 7, background: '#D89B24', borderRadius: 2,
   },
   volLabel: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 9, color: '#7acca0', flexShrink: 0, width: 32,
+    fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#c8cbd0', letterSpacing: 1, marginTop: 3,
   },
   rackBtn: {
-    background: '#151515', border: '1px solid #333', borderRadius: 4,
+    background: 'linear-gradient(180deg, #3a3c40 0%, #232427 100%)',
+    border: '1px solid #17181a', borderTop: '1px solid #5a5d62', borderRadius: 4,
     color: '#D89B24', fontFamily: "'Courier Prime', monospace", fontSize: 9,
-    padding: '6px 10px', cursor: 'pointer', letterSpacing: 1, flexShrink: 0,
+    padding: '7px 10px', cursor: 'pointer', letterSpacing: 1, flexShrink: 0,
+    boxShadow: '0 2px 0 #0a0a0a',
   },
-  hornBtn: {
-    background: 'linear-gradient(180deg, #2a1010 0%, #1a0808 100%)',
-    border: '1px solid rgba(140,48,38,0.5)', borderRadius: 5,
-    padding: '8px 16px', cursor: 'pointer', flexShrink: 0,
-    fontFamily: "'Baloo Thambi 2', sans-serif", fontSize: 11, fontWeight: 700,
-    color: '#F3C94B', letterSpacing: 1,
+  namePlate: {
+    display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+    flexShrink: 0, paddingRight: 2,
+  },
+  namePlateBrand: {
+    fontFamily: "'Arial Narrow', 'Helvetica Neue', Arial, sans-serif",
+    fontSize: 15, fontWeight: 800, fontStyle: 'italic',
+    color: '#eceef0', letterSpacing: 0.5, lineHeight: 1,
+    transform: 'scaleY(1.08)',
+    textShadow: '0 1px 0 rgba(0,0,0,0.7), 0 0 8px rgba(255,255,255,0.12)',
+  },
+  namePlateModel: {
+    fontFamily: "'Courier Prime', monospace", fontSize: 9, fontWeight: 700,
+    color: '#D89B24', letterSpacing: 2, lineHeight: 1.4, marginTop: 1,
   },
 }

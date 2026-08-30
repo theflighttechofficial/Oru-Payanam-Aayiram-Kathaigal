@@ -9,6 +9,8 @@ import {
 let leftBlinkTimer = null
 let rightBlinkTimer = null
 let speedTimer = null
+let preHideMuted = false
+let preHideAmbient = false
 
 const PERSIST_KEY = 'tamizh-payanam-save'
 
@@ -96,8 +98,11 @@ const useStore = create((set, get) => ({
     } else {
       stopEngineHum()
       if (speedTimer) { clearInterval(speedTimer); speedTimer = null }
+      if (leftBlinkTimer) { clearInterval(leftBlinkTimer); leftBlinkTimer = null }
+      if (rightBlinkTimer) { clearInterval(rightBlinkTimer); rightBlinkTimer = null }
       set({
-        engineOn: false, headlightsOn: false, leftIndicatorOn: false, rightIndicatorOn: false,
+        engineOn: false, headlightsOn: false,
+        leftIndicatorOn: false, rightIndicatorOn: false, leftIndicatorLit: false, rightIndicatorLit: false,
         transitioning: false, transitPhase: 'idle', speed: 0,
       })
       get().showToast('என்ஜின் ஆஃப் — ENGINE OFF')
@@ -253,22 +258,32 @@ const useStore = create((set, get) => ({
     const hiding = !s.busHidden
     if (hiding) {
       // Full power-down: engine, lights, indicators, sound, and ambience all off.
+      // Remember what mute/ambience were so showing the bus again can restore them.
+      preHideMuted = s.muted
+      preHideAmbient = s.ambientSound
       if (s.engineOn) stopEngineHum()
       if (speedTimer) { clearInterval(speedTimer); speedTimer = null }
       if (leftBlinkTimer) { clearInterval(leftBlinkTimer); leftBlinkTimer = null }
       if (rightBlinkTimer) { clearInterval(rightBlinkTimer); rightBlinkTimer = null }
       if (s.ambientSound) stopAmbient()
       if (!s.muted) setMuted(true)
+      if (s.playerMode === 'radio') stopRadio()
       set({
         busHidden: true,
         engineOn: false, headlightsOn: false,
         leftIndicatorOn: false, rightIndicatorOn: false, leftIndicatorLit: false, rightIndicatorLit: false,
         transitioning: false, transitPhase: 'idle', speed: 0,
         ambientSound: false, muted: true,
+        isPlaying: false,
       })
       get().showToast('🚌 பேருந்து மறைக்கப்பட்டது — bus + dashboard fully off')
     } else {
-      set({ busHidden: false })
+      // Restore whatever mute/ambience state was in effect before hiding.
+      if (!preHideMuted) setMuted(false)
+      if (preHideAmbient) startAmbient()
+      if (s.playerMode === 'radio' && s.radioPlaying) startRadio(s.radioStation)
+      set({ busHidden: false, muted: preHideMuted, ambientSound: preHideAmbient })
+      persist(get())
     }
   },
   setPlayerMode: (mode) => {

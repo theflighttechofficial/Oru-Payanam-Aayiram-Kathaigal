@@ -43,6 +43,7 @@ export const ROUTES = [
   },
   {
     id: 2,
+    depotT: 'மதுரை',
     name: 'Madurai',
     nameT: 'மதுரை',
     routeNum: '7',
@@ -64,6 +65,7 @@ export const ROUTES = [
   },
   {
     id: 3,
+    depotT: 'திருநெல்வேலி',
     name: 'Kanyakumari',
     nameT: 'கன்னியாகுமரி',
     routeNum: '49',
@@ -85,6 +87,7 @@ export const ROUTES = [
   },
   {
     id: 4,
+    depotT: 'கோவை',
     name: 'Nilgiris',
     nameT: 'நீலகிரி',
     routeNum: '12',
@@ -106,6 +109,7 @@ export const ROUTES = [
   },
   {
     id: 5,
+    depotT: 'கும்பகோணம்',
     name: 'Cauvery Delta',
     nameT: 'காவிரி டெல்டா',
     routeNum: '36B',

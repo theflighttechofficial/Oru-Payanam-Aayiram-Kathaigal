@@ -3,7 +3,7 @@ import useStore from '../store/useStore'
 import { ROUTES } from '../data/routes'
 
 export default function RouteSelector() {
-  const { currentRoute, setRoute, transitioning, exploredRoutes, engineOn } = useStore()
+  const { currentRoute, setRoute, transitioning, exploredRoutes, engineOn, busHidden } = useStore()
 
   return (
     <div className="dash-wrap-center" style={styles.wrap}>
@@ -15,7 +15,7 @@ export default function RouteSelector() {
       </div>
 
       {/* Ignition hint — route buttons stay locked until the engine is started */}
-      {!engineOn && (
+      {!engineOn && !busHidden && (
         <div style={styles.ignHint}>🔑 START THE ENGINE FIRST — என்ஜினை ஆன் செய்யவும்</div>
       )}
 
@@ -93,10 +93,11 @@ const styles = {
   boardLabelText: { color: '#444' },
   ignHint: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 9,
+    fontSize: 13,
+    fontWeight: 700,
     letterSpacing: 1,
     color: '#F3C94B',
-    marginBottom: 6,
+    marginBottom: 8,
     textShadow: '0 0 8px rgba(243,201,75,0.4)',
   },
   buttons: {
@@ -147,7 +148,7 @@ const styles = {
     borderRadius: '50%',
     background: '#F3C94B',
     boxShadow: '0 0 6px #F3C94B',
-    animation: 'pulse 1.5s ease infinite',
+    animation: 'pulseDot 1.5s ease infinite',
     flexShrink: 0,
   },
 }

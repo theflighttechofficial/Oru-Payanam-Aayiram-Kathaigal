@@ -64,6 +64,20 @@ export default function TNSTCBus({ route, moving }) {
           <stop offset="40%" stopColor="#F3C94B" stopOpacity="0.22" />
           <stop offset="100%" stopColor="#F3C94B" stopOpacity="0" />
         </linearGradient>
+        <linearGradient id="chromeRim" x1="15%" y1="0%" x2="85%" y2="100%">
+          <stop offset="0%" stopColor="#fafafa" />
+          <stop offset="22%" stopColor="#8a8d92" />
+          <stop offset="45%" stopColor="#f2f2f2" />
+          <stop offset="62%" stopColor="#6a6d72" />
+          <stop offset="80%" stopColor="#d8d8d8" />
+          <stop offset="100%" stopColor="#9a9da2" />
+        </linearGradient>
+        {/* Wheel arches — actual open cutouts through the body, not painted-on shading */}
+        <mask id="wheelArchMask">
+          <rect x="15" y={BODY_TOP} width="870" height="175" fill="#fff" />
+          <circle cx="175" cy={BODY_BOTTOM} r="46" fill="#000" />
+          <circle cx="680" cy={BODY_BOTTOM} r="46" fill="#000" />
+        </mask>
       </defs>
       {/* ══════════════ ROOF RACK ══════════════ */}
       <rect x="75" y="34" width="770" height="4" rx="2" fill="#1a1a1a" />
@@ -74,10 +88,6 @@ export default function TNSTCBus({ route, moving }) {
       <rect x="840" y="30" width="5" height="22" rx="2" fill="#1a1a1a" />
       <rect x="75" y="30" width="5" height="22" rx="2" fill="#1a1a1a" />
 
-      {/* Fleet number badge, roof-mounted, unobstructed */}
-      <rect x="760" y="10" width="30" height="13" rx="2" fill="#0a0a0a" opacity="0.85" />
-      <text x="775" y="19.5" textAnchor="middle" fill={BRASS} fontFamily="Courier Prime" fontSize="8" fontWeight="700">439</text>
-
       {/* REAR LADDER */}
       <rect x="52" y="30" width="5" height="110" rx="2" fill="#1a1a1a" />
       <rect x="68" y="30" width="5" height="110" rx="2" fill="#1a1a1a" />
@@ -86,7 +96,7 @@ export default function TNSTCBus({ route, moving }) {
       ))}
 
       {/* ══════════════ BODY ══════════════ */}
-      <rect x="15" y={BODY_TOP} width="870" height="175" rx="10" fill={MINT} />
+      <rect x="15" y={BODY_TOP} width="870" height="175" rx="10" fill={MINT} mask="url(#wheelArchMask)" />
       <rect x="15" y={BODY_TOP} width="870" height="18" rx="6" fill={MINT_ROOF} />
 
       {/* ══════════════ WINDOW ROW — pulled in to leave room for the door ══════════════ */}
@@ -155,15 +165,7 @@ export default function TNSTCBus({ route, moving }) {
         fontWeight="600"
         opacity="0.9"
       >
-        தமிழ்நாடு அரசு போக்குவரத்து கழகம் - விழுப்புரம்
-      </text>
-
-      {/* Route number + class badge — tucked into the rear roof area, clear of the body text */}
-      <rect x="82" y="16" width="34" height="12" rx="2" fill={YELLOW} />
-      <text x="99" y="25" textAnchor="middle" fill={BLACK} fontFamily="Courier Prime" fontSize="8" fontWeight="800">{route.routeNum}</text>
-      <rect x="120" y="16" width="48" height="12" rx="2" fill="#cc2222" />
-      <text x="144" y="25" textAnchor="middle" fill="#fff" fontFamily="Courier Prime" fontSize="6" fontWeight="700" letterSpacing="0.5">
-        {route.passType === 'EXP' ? 'EXPRESS' : 'ORDINARY'}
+        தமிழ்நாடு அரசுப் போக்குவரத்துக் கழகம் - {route.depotT || 'விழுப்புரம்'}
       </text>
 
       {/* ══════════════ DOOR — full-height, pulled up close to the front cab, leaving one window's worth of gap ══════════════ */}
@@ -284,9 +286,9 @@ export default function TNSTCBus({ route, moving }) {
         </>
       )}
 
-      {/* ══════════════ WHEELS ══════════════ */}
-      <Wheel cx={175} cy={235} r={34} moving={isMoving} spinning={engineOn} />
-      <Wheel cx={680} cy={235} r={34} moving={isMoving} spinning={engineOn} />
+      {/* ══════════════ WHEELS — tires enlarged, rims/hubs unchanged, centred in the open arches ══════════════ */}
+      <Wheel cx={175} cy={BODY_BOTTOM} tireR={44} r={34} moving={isMoving} spinning={engineOn} />
+      <Wheel cx={680} cy={BODY_BOTTOM} tireR={44} r={34} moving={isMoving} spinning={engineOn} />
 
       {/* HORN FLASH */}
       {hornPressed && (
@@ -296,9 +298,11 @@ export default function TNSTCBus({ route, moving }) {
   )
 }
 
-function Wheel({ cx, cy, r = 34, moving, spinning }) {
-  const treadOuter = r
-  const treadInner = r - 6
+function Wheel({ cx, cy, r = 34, tireR, moving, spinning }) {
+  // Tire (tread) size is independent of the rim/hub/spoke sizing below, so
+  // enlarging the tire never scales the rim up with it.
+  const treadOuter = tireR || r
+  const treadInner = treadOuter - 6
   const rim = r - 9
   const hub = r - 14
   const hubInner = r - 18
@@ -306,7 +310,7 @@ function Wheel({ cx, cy, r = 34, moving, spinning }) {
   const spokeInner = r - 30
   return (
     <g>
-      <ellipse cx={cx} cy="220" rx="38" ry="7" fill="#000" opacity="0.4" />
+      <ellipse cx={cx} cy={cy + treadOuter - 6} rx="38" ry="7" fill="#000" opacity="0.4" />
 
       <circle cx={cx} cy={cy} r={treadOuter} fill="#0f0f0f" />
       <circle cx={cx} cy={cy} r={treadOuter} fill="none" stroke="#1a1a1a" strokeWidth="5" />
@@ -316,23 +320,23 @@ function Wheel({ cx, cy, r = 34, moving, spinning }) {
         const x2 = cx + treadOuter * Math.cos(rad), y2 = cy + treadOuter * Math.sin(rad)
         return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#1a1a1a" strokeWidth="2" />
       })}
-      <circle cx={cx} cy={cy} r={rim} fill="#1c1c1c" stroke="#2a2a2a" strokeWidth="2" />
+      <circle cx={cx} cy={cy} r={rim} fill="url(#chromeRim)" stroke="#4a4d52" strokeWidth="1.5" />
 
       <g style={spinning ? { animation: `hubSpin ${moving ? '0.8s' : '2.6s'} linear infinite`, transformOrigin: `${cx}px ${cy}px` } : undefined}>
-        <circle cx={cx} cy={cy} r={hub} fill={PINK_HUB} />
-        <circle cx={cx} cy={cy} r={hubInner} fill="#C03535" />
+        <circle cx={cx} cy={cy} r={hub} fill="url(#chromeRim)" />
+        <circle cx={cx} cy={cy} r={hubInner} fill="#7a7d82" />
         {[0, 60, 120, 180, 240, 300].map((deg) => {
           const rad = (deg * Math.PI) / 180
           return (
             <line key={deg}
               x1={cx + spokeInner * Math.cos(rad)} y1={cy + spokeInner * Math.sin(rad)}
               x2={cx + spokeOuter * Math.cos(rad)} y2={cy + spokeOuter * Math.sin(rad)}
-              stroke="#E06060" strokeWidth="3" strokeLinecap="round"
+              stroke="#d8d8d8" strokeWidth="3" strokeLinecap="round"
             />
           )
         })}
-        <circle cx={cx} cy={cy} r="6" fill="#A02020" />
-        <circle cx={cx} cy={cy} r="3" fill="#C04040" />
+        <circle cx={cx} cy={cy} r="6" fill="#6a6d72" />
+        <circle cx={cx} cy={cy} r="3" fill="#e8e8e8" />
       </g>
     </g>
   )
