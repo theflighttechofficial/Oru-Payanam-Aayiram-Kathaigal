@@ -14,16 +14,19 @@ let preHideAmbient = false
 
 const PERSIST_KEY = 'tamizh-payanam-save'
 
+// sessionStorage (not localStorage) on purpose — journey progress should
+// survive a reload within the same tab, but reset once the site is actually
+// closed, so every fresh visit starts the trip over.
 function loadSave() {
   try {
-    const raw = localStorage.getItem(PERSIST_KEY)
+    const raw = sessionStorage.getItem(PERSIST_KEY)
     if (!raw) return {}
     return JSON.parse(raw)
   } catch (e) { return {} }
 }
 function persist(state) {
   try {
-    localStorage.setItem(PERSIST_KEY, JSON.stringify({
+    sessionStorage.setItem(PERSIST_KEY, JSON.stringify({
       exploredRoutes: [...state.exploredRoutes],
       muted: state.muted,
       currentRoute: state.currentRoute,
@@ -74,6 +77,11 @@ const useStore = create((set, get) => ({
   playerReady: false,
   showTapeRack: false,
   busHidden: false,
+
+  // ── first-visit "welcome song" (fullscreen + hide bus) ──
+  introSongTriggered: false,
+  introSongActive: false,
+  showTapeDeckHint: false,
 
   boot: () => {
     if (get().muted) setMuted(true)
@@ -253,6 +261,17 @@ const useStore = create((set, get) => ({
   setNowPlaying: (title, index) => set({ nowPlayingTitle: title, currentTrackIndex: index }),
   setPlayerReady: (v) => set({ playerReady: v }),
   toggleTapeRack: () => set((s) => ({ showTapeRack: !s.showTapeRack })),
+  startIntroSong: () => {
+    const s = get()
+    if (s.introSongTriggered) return
+    set({ introSongTriggered: true, introSongActive: true })
+  },
+  endIntroSong: () => set({ introSongActive: false, showTapeDeckHint: true }),
+  // A new tape from the deck is itself proof the visitor found it — end
+  // intro mode quietly, no need for the hint on top of it.
+  cancelIntroSong: () => set({ introSongActive: false }),
+  dismissTapeDeckHint: () => set({ showTapeDeckHint: false }),
+
   toggleBusHidden: () => {
     const s = get()
     const hiding = !s.busHidden
@@ -290,7 +309,11 @@ const useStore = create((set, get) => ({
     const s = get()
     if (s.playerMode === 'radio' && mode !== 'radio') stopRadio()
     if (mode === 'radio' && s.radioPlaying) startRadio(s.radioStation)
-    set({ playerMode: mode, isPlaying: false })
+    // Switching the TAPE/FM tab doesn't touch the YouTube player at all, so
+    // don't stomp isPlaying to false if the welcome song is actually still
+    // playing in the background — that desync is what left the play/pause
+    // button "stuck" (it kept calling playVideo() on an already-playing video).
+    set({ playerMode: mode, isPlaying: s.introSongActive ? s.isPlaying : false })
   },
 }))
 

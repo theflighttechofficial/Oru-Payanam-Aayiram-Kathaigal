@@ -3,13 +3,17 @@ import useStore from '../store/useStore'
 import { RADIO_STATIONS, SONGS } from '../data/routes'
 import { playClick } from '../audio/sound'
 
+// The first-visit "welcome song" — plays once, standalone, when the visitor
+// goes fullscreen and hides the bus; not part of any tape's playlist.
+const INTRO_SONG_ID = '_MG6beqPuMQ'
+
 // Minimalist single-row cassette deck — one compact bar, no clutter.
 export default function TamizhRadio() {
   const {
     radioStation, setRadioStation, radioPlaying, toggleRadio, showToast,
     activeTape, deckTape, isPlaying, setPlaying, nowPlayingTitle, setNowPlaying,
     volume, setVolume, playerMode, setPlayerMode, playerReady, setPlayerReady, ejectTape,
-    toggleTapeRack, busHidden,
+    toggleTapeRack, busHidden, introSongActive, endIntroSong, cancelIntroSong, showTapeDeckHint, dismissTapeDeckHint,
   } = useStore()
 
   const [ejecting, setEjecting] = useState(false)
@@ -21,6 +25,7 @@ export default function TamizhRadio() {
   const hiddenPlayerRef = useRef(null)
   const progressTimerRef = useRef(null)
   const errorStreakRef = useRef(0)
+  const introModeRef = useRef(false)
 
   const station = RADIO_STATIONS[radioStation]
   const song = SONGS[radioStation]
@@ -42,14 +47,27 @@ export default function TamizhRadio() {
               // actually loaded so the display always reflects the real track.
               try {
                 const data = ytPlayerRef.current.getVideoData()
-                const idx = ytPlayerRef.current.getPlaylistIndex()
+                const idx = introModeRef.current ? 0 : ytPlayerRef.current.getPlaylistIndex()
                 setNowPlaying(data?.title || '', idx)
               } catch (err) {}
             } else if (e.data === window.YT.PlayerState.PAUSED) {
               setPlaying(false)
+            } else if (e.data === window.YT.PlayerState.ENDED && introModeRef.current) {
+              // Welcome song finished — hand off to the tape deck hint.
+              introModeRef.current = false
+              setPlaying(false)
+              endIntroSong()
             }
           },
           onError: () => {
+            if (introModeRef.current) {
+              // Welcome song failed to embed — don't loop on it, just move
+              // straight to the tape-deck hint as if it had played through.
+              introModeRef.current = false
+              setPlaying(false)
+              endIntroSong()
+              return
+            }
             // 101/150 = embedding disabled by the uploader, 100 = video removed/private
             errorStreakRef.current += 1
             if (errorStreakRef.current >= 5) {
@@ -86,6 +104,12 @@ export default function TamizhRadio() {
 
   useEffect(() => {
     if (!deckTape || !playerReady || !ytPlayerRef.current) return
+    // Loading a real tape ends the welcome song, if it was still active
+    // (paused or playing) — the visitor found the tape deck on their own.
+    if (introModeRef.current) {
+      introModeRef.current = false
+      cancelIntroSong()
+    }
     // Hard-stop whatever was previously loaded before switching, and clear
     // the displayed title immediately — otherwise the old tape's audio (or
     // its stale title) can bleed into the new tape while the new playlist
@@ -112,12 +136,29 @@ export default function TamizhRadio() {
 
   // Hiding the bus is meant to power everything down — pause the actual
   // YouTube tape audio too, which the store can't reach directly since this
-  // component owns the player instance.
+  // component owns the player instance. Exception: the welcome song is
+  // *meant* to play precisely while the bus is hidden, so don't cut it.
   useEffect(() => {
-    if (busHidden && ytPlayerRef.current && isPlaying) {
+    if (busHidden && ytPlayerRef.current && isPlaying && !introModeRef.current) {
       try { ytPlayerRef.current.pauseVideo() } catch (err) {}
     }
   }, [busHidden, isPlaying])
+
+  // Welcome song — fires once, standalone (not part of a tape's playlist),
+  // when the visitor goes fullscreen and hides the bus for the first time.
+  useEffect(() => {
+    if (!introSongActive || !playerReady || !ytPlayerRef.current) return
+    introModeRef.current = true
+    setNowPlaying('', 0)
+    try {
+      ytPlayerRef.current.loadVideoById(INTRO_SONG_ID)
+      ytPlayerRef.current.setVolume(volume)
+    } catch (err) {
+      introModeRef.current = false
+      endIntroSong()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [introSongActive, playerReady])
 
   useEffect(() => {
     clearInterval(progressTimerRef.current)
@@ -137,8 +178,25 @@ export default function TamizhRadio() {
     setRadioStation(next)
   }
 
+  // introModeRef (not the store's introSongActive) is the ground truth for
+  // "is the welcome song the thing actually loaded in the player right now" —
+  // it's set/cleared in lockstep with the real loadVideoById/ended/error
+  // calls, with no store round-trip in between. Every control below checks
+  // it directly so play/pause/seek/skip can never desync from what's
+  // actually playing, regardless of what else happens (hiding the bus,
+  // changing destination, switching TAPE/FM tabs, etc).
   const handlePlayPause = () => {
     playClick()
+    if (introModeRef.current) {
+      // A manual pause just pauses — the welcome song stays loaded and
+      // resumable. Intro mode only actually ends when it plays through to
+      // the end on its own, or the visitor loads a different tape.
+      try {
+        if (isPlaying) ytPlayerRef.current.pauseVideo()
+        else ytPlayerRef.current.playVideo()
+      } catch (err) {}
+      return
+    }
     if (playerMode === 'radio') { toggleRadio(); return }
     if (!deckTape) { showToast('📼 Load a tape first'); return }
     if (!playerReady) {
@@ -153,14 +211,16 @@ export default function TamizhRadio() {
     } catch (err) {}
   }
   const handleSeek = (deltaSec) => {
-    if (!deckTape || !playerReady) return
+    if (!introModeRef.current && !deckTape) return
+    if (!playerReady) return
     try {
       const t = ytPlayerRef.current.getCurrentTime() || 0
       ytPlayerRef.current.seekTo(Math.max(0, t + deltaSec), true)
     } catch (err) {}
   }
   const handleSkip = (dir) => {
-    if (!deckTape || !playerReady) return
+    if (!introModeRef.current && !deckTape) return
+    if (!playerReady) return
     playClick()
     try { dir > 0 ? ytPlayerRef.current.nextVideo() : ytPlayerRef.current.previousVideo() } catch (err) {}
   }
@@ -174,7 +234,8 @@ export default function TamizhRadio() {
     setTimeout(() => { ejectTape(); setEjecting(false) }, 500)
   }
   const handleScrub = (e) => {
-    if (!deckTape || !playerReady || !duration) return
+    if (!introModeRef.current && !deckTape) return
+    if (!playerReady || !duration) return
     const rect = e.currentTarget.getBoundingClientRect()
     const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
     try { ytPlayerRef.current.seekTo(frac * duration, true) } catch (err) {}
@@ -208,7 +269,7 @@ export default function TamizhRadio() {
 
   const trackName = deckTape ? (nowPlayingTitle || 'Loading…') : null
   const progressPct = duration ? (elapsed / duration) * 100 : 0
-  const playing = playerMode === 'radio' ? radioPlaying : isPlaying
+  const playing = introSongActive ? isPlaying : playerMode === 'radio' ? radioPlaying : isPlaying
 
   return (
     <div className="desktop-only" style={styles.wrap}>
@@ -240,12 +301,14 @@ export default function TamizhRadio() {
 
       {/* LCD display — recessed glass, backlit digital readout */}
       <div style={styles.lcdBezel}>
-        <div style={styles.lcd} onClick={playerMode === 'tape' ? handleScrub : undefined}>
+        <div style={styles.lcd} onClick={!introSongActive && playerMode === 'tape' ? handleScrub : undefined}>
           <div style={styles.lcdTopRow}>
-            <span style={styles.lcdBand}>{playerMode === 'tape' ? 'TAPE' : station.freq}</span>
+            <span style={styles.lcdBand}>{introSongActive ? 'WELCOME' : playerMode === 'tape' ? 'TAPE' : station.freq}</span>
             <span style={{ ...styles.lcdDot, opacity: playing ? 1 : 0.25 }}>● {playing ? 'PLAY' : 'STOP'}</span>
           </div>
-          {playerMode === 'tape' ? (
+          {introSongActive ? (
+            <div style={styles.lcdTrack}>{nowPlayingTitle || 'Loading…'}</div>
+          ) : playerMode === 'tape' ? (
             deckTape ? (
               <>
                 <div style={styles.lcdTrack}>{deckTape.labelEng} — {trackName}</div>
@@ -281,7 +344,15 @@ export default function TamizhRadio() {
         <span style={styles.volLabel}>VOL {Math.round(volume)}</span>
       </div>
 
-      <button style={styles.rackBtn} onClick={() => { playClick(); toggleTapeRack() }}>TAPE RACK ▤</button>
+      <div style={styles.rackBtnWrap}>
+        {showTapeDeckHint && (
+          <div style={styles.tapeDeckHint}>
+            <span style={styles.tapeDeckHintText}>play songs using the tape deck</span>
+            <span style={styles.tapeDeckHintArrow}>↓</span>
+          </div>
+        )}
+        <button style={styles.rackBtn} onClick={() => { playClick(); toggleTapeRack(); dismissTapeDeckHint() }}>TAPE RACK ▤</button>
+      </div>
 
       {/* Unit nameplate — engraved-style badge, right end of the set */}
       <div style={styles.namePlate}>
@@ -431,12 +502,37 @@ const styles = {
   volLabel: {
     fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#c8cbd0', letterSpacing: 1, marginTop: 3,
   },
+  rackBtnWrap: { position: 'relative', flexShrink: 0 },
   rackBtn: {
     background: 'linear-gradient(180deg, #3a3c40 0%, #232427 100%)',
     border: '1px solid #17181a', borderTop: '1px solid #5a5d62', borderRadius: 4,
     color: '#D89B24', fontFamily: "'Courier Prime', monospace", fontSize: 9,
     padding: '7px 10px', cursor: 'pointer', letterSpacing: 1, flexShrink: 0,
     boxShadow: '0 2px 0 #0a0a0a',
+  },
+  tapeDeckHint: {
+    position: 'absolute',
+    bottom: '100%',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    marginBottom: 6,
+    width: 130,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    animation: 'floatBus 1.6s ease-in-out infinite',
+    pointerEvents: 'none',
+  },
+  tapeDeckHintText: {
+    fontFamily: "'Courier Prime', monospace", fontSize: 10, fontWeight: 700,
+    color: '#F3C94B', letterSpacing: 0.5, textAlign: 'center', lineHeight: 1.3,
+    background: 'rgba(8,8,8,0.92)', border: '1px solid rgba(243,201,75,0.5)',
+    borderRadius: 4, padding: '3px 6px',
+    textShadow: '0 0 8px rgba(243,201,75,0.5)',
+  },
+  tapeDeckHintArrow: {
+    fontSize: 14, color: '#F3C94B', lineHeight: 1, marginTop: 1,
+    textShadow: '0 0 8px rgba(243,201,75,0.6)',
   },
   namePlate: {
     display: 'flex', flexDirection: 'column', alignItems: 'flex-end',

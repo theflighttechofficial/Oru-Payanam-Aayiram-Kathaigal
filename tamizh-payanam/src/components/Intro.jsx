@@ -17,10 +17,14 @@ export default function Intro() {
   useEffect(() => {
     if (booted) return
     if (lines < CHECKS.length) {
-      const t = setTimeout(() => setLines(l => l + 1), 260)
+      // Each diagnostic line lands with a little variance so the sequence
+      // doesn't feel metronomic — total runs ~2.4-2.8s, giving the boot
+      // screen room to build anticipation instead of rushing past.
+      const delay = 420 + Math.random() * 140
+      const t = setTimeout(() => setLines(l => l + 1), delay)
       return () => clearTimeout(t)
     } else {
-      const t = setTimeout(() => setReady(true), 300)
+      const t = setTimeout(() => setReady(true), 500)
       return () => clearTimeout(t)
     }
   }, [lines, booted])

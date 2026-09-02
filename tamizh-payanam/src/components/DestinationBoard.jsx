@@ -5,18 +5,26 @@ export default function DestinationBoard({ route }) {
   const { transitioning } = useStore()
   const [displayed, setDisplayed] = useState(route.board)
   const [displayedT, setDisplayedT] = useState(route.boardT)
-  const [flipping, setFlipping] = useState(false)
+  // Split-flap arrival-board flip: 'down' rotates the current card away
+  // (hinge at the bottom, like the real thing), then at the exact moment
+  // it's edge-on and invisible the text swaps underneath and 'up' rotates
+  // the new card back into view.
+  const [flipPhase, setFlipPhase] = useState('idle')
 
   useEffect(() => {
     if (transitioning) {
-      setFlipping(true)
-      setTimeout(() => {
+      setFlipPhase('down')
+      const t1 = setTimeout(() => {
         setDisplayed(route.board)
         setDisplayedT(route.boardT)
-        setFlipping(false)
-      }, 900)
+        setFlipPhase('up')
+      }, 420)
+      const t2 = setTimeout(() => setFlipPhase('idle'), 840)
+      return () => { clearTimeout(t1); clearTimeout(t2) }
     }
   }, [transitioning, route])
+
+  const flipping = flipPhase !== 'idle'
 
   return (
     <div style={styles.wrap}>
@@ -25,14 +33,18 @@ export default function DestinationBoard({ route }) {
         <span style={styles.headerText}>TNSTC · VILLUPURAM REGION · அரசுப் போக்குவரத்துக்கழகம்</span>
       </div>
 
-      {/* Main route display */}
-      <div style={{
-        ...styles.mainBoard,
-        opacity: flipping ? 0.3 : 1,
-        transform: flipping ? 'scaleY(0.85)' : 'scaleY(1)',
-        transition: 'opacity 0.2s ease, transform 0.2s ease',
-      }}>
-        <span style={styles.routeText}>{displayed}</span>
+      {/* Main route display — split-flap card flip, airport arrival board style */}
+      <div style={styles.flipViewport}>
+        <div style={{
+          ...styles.mainBoard,
+          transform: `rotateX(${flipPhase === 'down' ? '-90deg' : '0deg'})`,
+          transition: flipping ? 'transform 0.42s cubic-bezier(0.6, 0, 0.85, 0.35)' : 'none',
+        }}>
+          <span style={styles.routeText}>{displayed}</span>
+          {/* Center crease + sheen — sells the physical split-flap card look */}
+          <div style={styles.flipCrease} />
+          <div style={{ ...styles.flipSheen, opacity: flipping ? 0.35 : 0 }} />
+        </div>
       </div>
 
       {/* Tamil route text */}
@@ -99,8 +111,29 @@ const styles = {
     letterSpacing: 2,
     color: '#555',
   },
+  flipViewport: {
+    perspective: 300,
+  },
   mainBoard: {
+    position: 'relative',
     minHeight: 32,
+    transformOrigin: 'center bottom',
+    backfaceVisibility: 'hidden',
+    willChange: 'transform',
+  },
+  flipCrease: {
+    position: 'absolute',
+    left: 0, right: 0, top: '50%',
+    height: 1,
+    background: 'rgba(0,0,0,0.5)',
+    pointerEvents: 'none',
+  },
+  flipSheen: {
+    position: 'absolute',
+    inset: 0,
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 50%, rgba(0,0,0,0.3) 100%)',
+    transition: 'opacity 0.15s ease',
+    pointerEvents: 'none',
   },
   routeText: {
     fontFamily: "'Courier Prime', monospace",
