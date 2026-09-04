@@ -9,12 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "@vercel/speed-insights": "^2.0.0",
+    "framer-motion": "^11.3.8",
     "gsap": "^3.12.5",
     "howler": "^2.2.4",
-    "zustand": "^4.5.4",
-    "framer-motion": "^11.3.8"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.4"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",

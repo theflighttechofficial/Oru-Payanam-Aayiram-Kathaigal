@@ -21,6 +21,7 @@ import CRTOverlay       from './components/CRTOverlay'
 import PaintedBackground from './components/PaintedBackground'
 import TopTicker        from './components/TopTicker'
 import TapeRack         from './components/TapeRack'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 
 const REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia
   ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -244,6 +245,7 @@ export default function App() {
           TAMIZH PAYANAM · தமிழ் பயணம் · VILLUPURAM TNSTC · © 2025
         </div>
       </div>
+      <SpeedInsights />
     </>
   )
 }
