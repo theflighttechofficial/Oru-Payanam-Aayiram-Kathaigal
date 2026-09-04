@@ -69,6 +69,26 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', onFsChange)
   }, [])
 
+  // Auto-fullscreen: browsers require a real user gesture before granting
+  // fullscreen, so we can't force it on load — instead we request it on the
+  // very first interaction anywhere on the page (click/tap/keypress).
+  useEffect(() => {
+    if (document.fullscreenElement) return
+    const requestOnce = () => {
+      if (!document.fullscreenElement) {
+        appRef.current?.requestFullscreen?.().catch(() => {})
+      }
+      window.removeEventListener('pointerdown', requestOnce)
+      window.removeEventListener('keydown', requestOnce)
+    }
+    window.addEventListener('pointerdown', requestOnce, { once: true })
+    window.addEventListener('keydown', requestOnce, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', requestOnce)
+      window.removeEventListener('keydown', requestOnce)
+    }
+  }, [])
+
   const enterFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen()
     else appRef.current?.requestFullscreen?.()
