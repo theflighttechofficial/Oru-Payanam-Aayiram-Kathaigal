@@ -69,7 +69,7 @@ const styles = {
     border: '1px solid rgba(216,155,36,0.45)',
     borderRadius: 10,
     padding: '16px 28px',
-    width: 'min(360px, 90vw)',
+    minWidth: 360,
     textAlign: 'center',
     boxShadow: '0 8px 40px rgba(0,0,0,0.7), 0 0 30px rgba(216,155,36,0.08)',
   },

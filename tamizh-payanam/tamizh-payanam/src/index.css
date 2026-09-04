@@ -38,9 +38,7 @@ html, body, #root {
 /* Scrollbar hide */
 ::-webkit-scrollbar { display: none; }
 
-/* ── Mobile: simplify side panels, prioritize the bus ──
-   The radio/cassette bar is no longer desktop-exclusive — it stacks above
-   MobileBar in a compact form, so both are usable on a phone. */
+/* ── Mobile: simplify side panels, prioritize the bus ── */
 @media (max-width: 820px) {
   .desktop-only { display: none !important; }
 }
@@ -49,43 +47,27 @@ html, body, #root {
   .mobile-only { display: flex !important; }
 }
 
-/* Decorative-only parts of the radio bar (speaker grille, tuning dial,
-   nameplate) — dropped on narrow screens to fit the essential controls. */
-.radio-decor {}
-@media (max-width: 820px) {
-  .radio-decor { display: none !important; }
-}
-
-/* Radio bar: full desktop size normally; compact and stacked above
-   MobileBar (not overlapping it) on narrow screens. */
-.radio-bar { height: 78px; bottom: 0; }
-@media (max-width: 820px) {
-  .radio-bar { height: 56px !important; bottom: 54px !important; padding: 0 8px !important; gap: 6px !important; }
-}
-
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
 }
 
-/* Road sits just above the bottom cassette bar on desktop; on mobile it has
-   to clear both MobileBar and the compact radio bar stacked above it. */
-.road-raise { bottom: 110px; }
+/* Road sits just above the bottom cassette bar on desktop; flush to the
+   bottom on mobile, where that bar is hidden in favour of MobileBar */
+.road-raise { bottom: 0; }
 @media (min-width: 821px) {
   .road-raise { bottom: 64px; }
 }
 
-/* Bottom-anchored panels: on mobile, HornButton has to clear MobileBar +
-   the radio bar; the dash/route panels themselves are desktop-only so
-   their mobile offset is moot, kept only for consistency. */
-.dash-wrap, .dash-wrap-center { bottom: 16px; }
-.dash-wrap-right { bottom: 118px; }
+/* Bottom-anchored panels sit at their original offset on mobile (where the
+   cassette bar is hidden), and rise just above it on desktop */
+.dash-wrap, .dash-wrap-center, .dash-wrap-right { bottom: 16px; }
 .dash-wrap-left { bottom: 96px; }
 @media (min-width: 821px) {
   .dash-wrap, .dash-wrap-center, .dash-wrap-right { bottom: 80px; }
   .dash-wrap-left { bottom: 160px; }
 }
 
-.bus-wrap-raise { bottom: 110px; }
+.bus-wrap-raise { bottom: 78px; }
 @media (min-width: 821px) {
   .bus-wrap-raise { bottom: 80px; }
 }

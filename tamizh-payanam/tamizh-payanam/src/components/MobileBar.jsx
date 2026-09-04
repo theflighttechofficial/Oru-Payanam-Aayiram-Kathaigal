@@ -2,11 +2,11 @@ import React from 'react'
 import useStore from '../store/useStore'
 
 export default function MobileBar() {
-  const { pressHorn, toggleEngine, setActivePanel, toggleTapeRack } = useStore()
+  const { pressHorn, toggleEngine, setActivePanel } = useStore()
 
   return (
     <div className="mobile-only" style={styles.wrap}>
-      <button style={styles.btn} onClick={toggleTapeRack}>
+      <button style={styles.btn} onClick={() => document.getElementById('route-selector')?.scrollIntoView()}>
         <span>🚌</span><span style={styles.lbl}>ROUTE</span>
       </button>
       <button style={styles.btn} onClick={toggleEngine}>
@@ -28,14 +28,9 @@ const styles = {
     bottom: 0,
     left: 0,
     right: 0,
-    height: 54,
     zIndex: 40,
     background: 'rgba(6,8,6,0.95)',
     borderTop: '1px solid rgba(216,155,36,0.3)',
-    // No inline `display` here — same lesson as the MobileNotice bug: the
-    // .mobile-only class owns display (none by default, flex only under
-    // the mobile media query with !important); an inline value would beat
-    // that base rule and force this bar to render on desktop too.
   },
   btn: {
     flex: 1,

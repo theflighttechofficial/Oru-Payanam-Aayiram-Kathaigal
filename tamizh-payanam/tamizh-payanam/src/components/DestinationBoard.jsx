@@ -5,26 +5,18 @@ export default function DestinationBoard({ route }) {
   const { transitioning } = useStore()
   const [displayed, setDisplayed] = useState(route.board)
   const [displayedT, setDisplayedT] = useState(route.boardT)
-  // Split-flap arrival-board flip: 'down' rotates the current card away
-  // (hinge at the bottom, like the real thing), then at the exact moment
-  // it's edge-on and invisible the text swaps underneath and 'up' rotates
-  // the new card back into view.
-  const [flipPhase, setFlipPhase] = useState('idle')
+  const [flipping, setFlipping] = useState(false)
 
   useEffect(() => {
     if (transitioning) {
-      setFlipPhase('down')
-      const t1 = setTimeout(() => {
+      setFlipping(true)
+      setTimeout(() => {
         setDisplayed(route.board)
         setDisplayedT(route.boardT)
-        setFlipPhase('up')
-      }, 420)
-      const t2 = setTimeout(() => setFlipPhase('idle'), 840)
-      return () => { clearTimeout(t1); clearTimeout(t2) }
+        setFlipping(false)
+      }, 900)
     }
   }, [transitioning, route])
-
-  const flipping = flipPhase !== 'idle'
 
   return (
     <div style={styles.wrap}>
@@ -33,18 +25,14 @@ export default function DestinationBoard({ route }) {
         <span style={styles.headerText}>TNSTC · VILLUPURAM REGION · அரசுப் போக்குவரத்துக்கழகம்</span>
       </div>
 
-      {/* Main route display — split-flap card flip, airport arrival board style */}
-      <div style={styles.flipViewport}>
-        <div style={{
-          ...styles.mainBoard,
-          transform: `rotateX(${flipPhase === 'down' ? '-90deg' : '0deg'})`,
-          transition: flipping ? 'transform 0.42s cubic-bezier(0.6, 0, 0.85, 0.35)' : 'none',
-        }}>
-          <span style={styles.routeText}>{displayed}</span>
-          {/* Center crease + sheen — sells the physical split-flap card look */}
-          <div style={styles.flipCrease} />
-          <div style={{ ...styles.flipSheen, opacity: flipping ? 0.35 : 0 }} />
-        </div>
+      {/* Main route display */}
+      <div style={{
+        ...styles.mainBoard,
+        opacity: flipping ? 0.3 : 1,
+        transform: flipping ? 'scaleY(0.85)' : 'scaleY(1)',
+        transition: 'opacity 0.2s ease, transform 0.2s ease',
+      }}>
+        <span style={styles.routeText}>{displayed}</span>
       </div>
 
       {/* Tamil route text */}
@@ -61,10 +49,8 @@ export default function DestinationBoard({ route }) {
         <span style={styles.ledLabel}>VLP</span>
       </div>
 
-      {/* Nudge toward hiding the bus and playing music for the full nostalgic feel.
-          Desktop-only: on a phone this text wraps down over the bus artwork;
-          MobileBar's ROUTE button already surfaces the tape deck directly. */}
-      <div className="desktop-only" style={styles.musicHint}>🎵 பேருந்தை மறைத்து, கீழே உள்ள பட்டியில் இசையை இயக்கி பழைய நினைவுகளை மீட்டெடுங்கள் — hide the bus and play music from the player below to relive the nostalgia</div>
+      {/* Nudge toward the radio/cassette bar at the bottom of the screen */}
+      <div style={styles.musicHint}>🎵 கீழே உள்ள பட்டியில் இருந்து பாடல் கேளுங்கள் — play music from the bottom bar</div>
     </div>
   )
 }
@@ -79,7 +65,7 @@ const styles = {
     border: '2px solid #D89B24',
     borderRadius: 8,
     padding: '8px 28px 6px',
-    width: 'min(460px, 92vw)',
+    minWidth: 460,
     textAlign: 'center',
     boxShadow: '0 0 25px rgba(216,155,36,0.25), inset 0 0 20px rgba(0,0,0,0.6)',
     zIndex: 30,
@@ -90,15 +76,13 @@ const styles = {
     left: '50%',
     transform: 'translateX(-50%)',
     marginTop: 8,
-    width: 'min(90vw, 560px)',
-    textAlign: 'center',
+    whiteSpace: 'nowrap',
     fontFamily: "'Noto Sans Tamil', sans-serif",
     fontSize: 14,
     fontWeight: 600,
     color: '#D89B24',
     opacity: 0.9,
     letterSpacing: 0.5,
-    lineHeight: 1.4,
     pointerEvents: 'none',
     textShadow: '0 0 10px rgba(216,155,36,0.35), 0 2px 4px rgba(0,0,0,0.8)',
   },
@@ -113,29 +97,8 @@ const styles = {
     letterSpacing: 2,
     color: '#555',
   },
-  flipViewport: {
-    perspective: 300,
-  },
   mainBoard: {
-    position: 'relative',
     minHeight: 32,
-    transformOrigin: 'center bottom',
-    backfaceVisibility: 'hidden',
-    willChange: 'transform',
-  },
-  flipCrease: {
-    position: 'absolute',
-    left: 0, right: 0, top: '50%',
-    height: 1,
-    background: 'rgba(0,0,0,0.5)',
-    pointerEvents: 'none',
-  },
-  flipSheen: {
-    position: 'absolute',
-    inset: 0,
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 50%, rgba(0,0,0,0.3) 100%)',
-    transition: 'opacity 0.15s ease',
-    pointerEvents: 'none',
   },
   routeText: {
     fontFamily: "'Courier Prime', monospace",

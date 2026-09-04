@@ -22,7 +22,6 @@ export default function BusTicket({ route }) {
 
   return (
     <div
-      className="desktop-only"
       onClick={handleClick}
       style={{
         ...styles.wrap,

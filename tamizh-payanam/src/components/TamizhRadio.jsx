@@ -272,14 +272,15 @@ export default function TamizhRadio() {
   const playing = introSongActive ? isPlaying : playerMode === 'radio' ? radioPlaying : isPlaying
 
   return (
-    <div className="desktop-only" style={styles.wrap}>
+    <div className="radio-bar" style={styles.wrap}>
       <div ref={hiddenPlayerRef} style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }} />
 
       {/* Brushed-metal trim line, classic portable-receiver styling */}
       <div style={styles.trimLine} />
 
-      {/* Speaker grille — perforated panel, left end of the set */}
-      <div style={styles.grille}>
+      {/* Speaker grille — perforated panel, left end of the set. Decorative
+          only, so it's the first thing dropped on narrow screens. */}
+      <div className="radio-decor" style={styles.grille}>
         {Array.from({ length: 24 }).map((_, i) => <span key={i} style={styles.grilleDot} />)}
       </div>
 
@@ -323,18 +324,26 @@ export default function TamizhRadio() {
         </div>
       </div>
 
-      {/* Transport — compact icon row, dark control cluster */}
+      {/* Transport — compact icon row, dark control cluster. Rewind/forward
+          (10s seek / station tune) are the least essential on a narrow
+          screen — dropped there in favour of skip + play/pause + eject. */}
       <div style={styles.transport}>
-        <IconBtn label="⏪" onClick={() => { playClick(); playerMode === 'radio' ? tuneStation(-1) : handleSeek(-10) }} title="Rewind" />
+        <span className="radio-decor" style={{ display: 'contents' }}>
+          <IconBtn label="⏪" onClick={() => { playClick(); playerMode === 'radio' ? tuneStation(-1) : handleSeek(-10) }} title="Rewind" />
+        </span>
         {playerMode === 'tape' && <IconBtn label="⏮" onClick={() => handleSkip(-1)} title="Previous track" />}
         <IconBtn label={playing ? '⏸' : '▶'} onClick={handlePlayPause} active title="Play/Pause" />
         {playerMode === 'tape' && <IconBtn label="⏭" onClick={() => handleSkip(1)} title="Next track" />}
-        <IconBtn label="⏩" onClick={() => { playClick(); playerMode === 'radio' ? tuneStation(1) : handleSeek(10) }} title="Forward" />
+        <span className="radio-decor" style={{ display: 'contents' }}>
+          <IconBtn label="⏩" onClick={() => { playClick(); playerMode === 'radio' ? tuneStation(1) : handleSeek(10) }} title="Forward" />
+        </span>
         {playerMode === 'tape' && <IconBtn label="⏏" onClick={handleEject} title="Eject" />}
       </div>
 
-      {/* Tuning/volume dial assembly, with telescoping-antenna accent behind it */}
-      <div style={styles.dialAssembly}>
+      {/* Tuning/volume dial assembly, with telescoping-antenna accent behind it —
+          decorative housing; volume is still reachable via the LCD tap-scrub
+          and the transport buttons on narrow screens where this is hidden. */}
+      <div className="radio-decor" style={styles.dialAssembly}>
         <div style={styles.antenna} />
         <div style={styles.knobRing}>
           <div style={styles.knob} onMouseDown={onKnobMouseDown} title="Drag to adjust volume">
@@ -355,7 +364,7 @@ export default function TamizhRadio() {
       </div>
 
       {/* Unit nameplate — engraved-style badge, right end of the set */}
-      <div style={styles.namePlate}>
+      <div className="radio-decor" style={styles.namePlate}>
         <span style={styles.namePlateBrand}>SONY</span>
         <span style={styles.namePlateModel}>ICF-SW7600</span>
       </div>

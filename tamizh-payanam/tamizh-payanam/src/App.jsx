@@ -30,7 +30,7 @@ export default function App() {
   const {
     currentRoute, transitioning, transitPhase, hornPressed, pressHorn, booted, devMode, toggleDevMode,
     engineOn, headlightsOn, speed, radioPlaying, isPlaying, muted, showTapeRack, toggleTapeRack,
-    busHidden, toggleBusHidden, startIntroSong,
+    busHidden, toggleBusHidden,
   } = useStore()
   const route   = ROUTES[currentRoute]
   const appRef  = useRef()
@@ -39,18 +39,12 @@ export default function App() {
   const [showFsHint, setShowFsHint] = useState(false)
   const musicPlaying = radioPlaying || isPlaying
 
-  // Fullscreen hint — shows as soon as the intro finishes booting, once per visit
+  // Fullscreen hint — floats in a few seconds after boot, once per visit
   useEffect(() => {
     if (!booted || fullscreen) return
-    setShowFsHint(true)
-    return undefined
+    const t = setTimeout(() => setShowFsHint(true), 4000)
+    return () => clearTimeout(t)
   }, [booted, fullscreen])
-
-  // Welcome song — once the visitor is in fullscreen AND has hidden the bus,
-  // start the intro track (TamizhRadio picks this up via the store flag).
-  useEffect(() => {
-    if (fullscreen && busHidden) startIntroSong()
-  }, [fullscreen, busHidden, startIntroSong])
 
   // Keyboard: H = horn, D = dev overlay, F = fullscreen
   useEffect(() => {
@@ -110,7 +104,7 @@ export default function App() {
       <div ref={appRef} style={styles.root}>
 
         {/* ── LAYER -1: Painted background — the supplied artwork, full-bleed and clearly visible ── */}
-        <PaintedBackground route={route} bright={busHidden} />
+        <PaintedBackground route={route} />
 
         {/* ── LAYER 2: Interactive hotspots (temple bell, tea shop, cinema poster) — near-invisible,
              the painted background already supplies the visuals; this just keeps the clicks alive ── */}
@@ -118,47 +112,37 @@ export default function App() {
           <NightScene route={route} />
         </div>
 
-        {/* ── LAYER 3: Road — raised on desktop to sit just above the bottom dashboard panel.
-             Stays mounted and fades with the bus (not unmounted) so hiding feels cinematic,
-             not an abrupt cut. ── */}
-        <div className="road-raise" style={{
-          position: 'absolute', top: 0, left: 0, right: 0,
-          opacity: busHidden ? 0 : 1,
-          pointerEvents: busHidden ? 'none' : 'auto',
-          transition: 'opacity 0.6s ease',
-        }}>
-          <Road />
-        </div>
+        {/* ── LAYER 3: Road — raised on desktop to sit just above the bottom dashboard panel ── */}
+        {!busHidden && (
+          <div className="road-raise" style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+            <Road />
+          </div>
+        )}
 
         {/* ── KOLAM — self-drawing doorstep pattern, fades after intro ── */}
         <Kolam />
 
-        {/* ── TITLE — huge illuminated sign, top of world, static.
-             Desktop-only: it collides with the destination board on a narrow
-             screen where both are fighting for the same top-of-page space. ── */}
-        <div className="desktop-only" style={styles.titleWrap}>
+        {/* ── TITLE — huge illuminated sign, top of world, static ── */}
+        <div style={styles.titleWrap}>
           <div style={styles.titleTamil}>தமிழ்நாடு</div>
           <div style={styles.titleEng}>TAMIZH NĀDU</div>
           <div style={styles.tagline}>ஒரு பயணம். ஆயிரம் கதைகள்.</div>
         </div>
 
         {/* ── LAYER 4: TNSTC BUS — centrepiece. Fixed in place (no mouse parallax) —
-             motion comes from the road scrolling under it, wheels spinning, and body vibration.
-             Fades out over 600ms rather than vanishing instantly when hidden, so the painted
-             background can take over cinematically instead of an abrupt cut. ── */}
-        <div ref={busRef} className="bus-wrap-raise" style={{
-          ...styles.busWrap,
-          opacity: busHidden ? 0 : 1,
-          pointerEvents: busHidden ? 'none' : 'auto',
-          transition: 'opacity 0.6s ease',
-          // The bus is always subtly alive — floating at rest, vibrating while moving —
-          // it never goes fully static except under prefers-reduced-motion.
-          animation: REDUCED_MOTION ? 'none'
-            : transitPhase === 'moving' ? 'busVibrate 0.16s linear infinite'
-            : 'floatBus 4.5s ease-in-out infinite',
-        }}>
-          <TNSTCBus route={route} moving={transitPhase === 'moving'} />
-        </div>
+             motion comes from the road scrolling under it, wheels spinning, and body vibration. ── */}
+        {!busHidden && (
+          <div ref={busRef} className="bus-wrap-raise" style={{
+            ...styles.busWrap,
+            // The bus is always subtly alive — floating at rest, vibrating while moving —
+            // it never goes fully static except under prefers-reduced-motion.
+            animation: REDUCED_MOTION ? 'none'
+              : transitPhase === 'moving' ? 'busVibrate 0.16s linear infinite'
+              : 'floatBus 4.5s ease-in-out infinite',
+          }}>
+            <TNSTCBus route={route} moving={transitPhase === 'moving'} />
+          </div>
+        )}
 
         {/* ── UI: Hide-the-bus toggle — surfaces while music is playing, so the scene can be enjoyed unobstructed ── */}
         {musicPlaying && (

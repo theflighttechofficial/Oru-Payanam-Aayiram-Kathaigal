@@ -15,7 +15,7 @@ export default function TapeRack() {
   if (!showTapeRack) return null
 
   return (
-    <div className="desktop-only" style={styles.wrap}>
+    <div style={styles.wrap}>
       <div style={styles.trimLine} />
 
       <div style={styles.header}>
@@ -104,7 +104,7 @@ const styles = {
     position: 'absolute',
     top: 40,
     right: 16,
-    width: 210,
+    width: 'min(210px, calc(100vw - 32px))',
     maxHeight: 'calc(100vh - 280px)',
     overflowY: 'auto',
     background: 'linear-gradient(180deg, #4a4d52 0%, #34363a 30%, #232427 100%)',
