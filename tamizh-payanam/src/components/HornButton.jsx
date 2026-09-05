@@ -50,15 +50,15 @@ const styles = {
   icon: { fontSize: 18, lineHeight: 1 },
   label: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1,
-    color: '#8C3026',
+    color: '#F5EDD6',
     lineHeight: 1,
   },
   subLabel: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 7,
-    color: '#5a1a10',
+    fontSize: 10,
+    color: '#F3C94B',
     lineHeight: 1,
   },
 }

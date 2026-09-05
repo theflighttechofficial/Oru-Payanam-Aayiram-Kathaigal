@@ -76,7 +76,7 @@ export default function BusTicket({ route }) {
               }} />
               <span style={{
                 ...styles.journeyName,
-                color: explored.includes(i) ? '#333' : '#aaa',
+                color: explored.includes(i) ? '#333' : '#777',
               }}>{name}</span>
               {explored.includes(i) && <span style={styles.tick}>✓</span>}
             </div>
@@ -116,25 +116,25 @@ const styles = {
     transition: 'transform 0.2s ease',
   },
   header: { textAlign: 'center', marginBottom: 6 },
-  logo: { fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 9, color: '#8C3026', fontWeight: 700, lineHeight: 1.3 },
-  subLogo: { fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#555', letterSpacing: 2, marginTop: 2 },
+  logo: { fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: '#8C3026', fontWeight: 700, lineHeight: 1.3 },
+  subLogo: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#555', letterSpacing: 2, marginTop: 2 },
   divider: { borderTop: '1px dashed #bbb', margin: '6px 0' },
   row: { display: 'flex', justifyContent: 'space-between', marginBottom: 3 },
-  rowLabel: { fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#888', letterSpacing: 1 },
-  rowValue: { fontFamily: "'Courier Prime', monospace", fontSize: 9, color: '#222', fontWeight: 700 },
+  rowLabel: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#777', letterSpacing: 1 },
+  rowValue: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#222', fontWeight: 700 },
   tamilBottom: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   tamilText: { fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: '#8C3026' },
-  tapHint: { fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#bbb' },
+  tapHint: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#999' },
   perf: { borderTop: '2px dotted #ccc', margin: '6px 0' },
   barcode: { display: 'flex', alignItems: 'flex-end', gap: 1, height: 18, justifyContent: 'center' },
   barcodeBar: { height: '100%', background: '#333', borderRadius: 0.5 },
   journeyHeader: { fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 12, color: '#8C3026', textAlign: 'center', fontWeight: 700 },
-  journeySubhead: { fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#888', textAlign: 'center', letterSpacing: 2 },
+  journeySubhead: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#777', textAlign: 'center', letterSpacing: 2 },
   journeyRow: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 },
   journeyDot: { width: 10, height: 10, borderRadius: '50%', flexShrink: 0 },
-  journeyName: { fontFamily: "'Courier Prime', monospace", fontSize: 9, flex: 1 },
-  tick: { color: '#2E8B57', fontSize: 10, fontWeight: 700 },
+  journeyName: { fontFamily: "'Courier Prime', monospace", fontSize: 11, flex: 1 },
+  tick: { color: '#2E8B57', fontSize: 11, fontWeight: 700 },
   journeyProgress: { height: 4, background: '#ddd', borderRadius: 2, overflow: 'hidden', marginBottom: 3 },
   progressBar: { height: '100%', background: '#2E8B57', borderRadius: 2, transition: 'width 0.5s ease' },
-  progressLabel: { fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#888', textAlign: 'center' },
+  progressLabel: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#777', textAlign: 'center' },
 }

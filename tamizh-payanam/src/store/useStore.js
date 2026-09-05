@@ -9,8 +9,14 @@ import {
 let leftBlinkTimer = null
 let rightBlinkTimer = null
 let speedTimer = null
+let routeTransitionTimers = []
 let preHideMuted = false
 let preHideAmbient = false
+
+function clearRouteTransitionTimers() {
+  routeTransitionTimers.forEach(clearTimeout)
+  routeTransitionTimers = []
+}
 
 const PERSIST_KEY = 'tamizh-payanam-save'
 
@@ -72,7 +78,7 @@ const useStore = create((set, get) => ({
   isPlaying: false,
   currentTrackIndex: 0,
   nowPlayingTitle: '',
-  volume: 75,
+  volume: 100,
   playerMode: 'tape',     // 'tape' | 'radio'
   playerReady: false,
   showTapeRack: false,
@@ -108,6 +114,12 @@ const useStore = create((set, get) => ({
       if (speedTimer) { clearInterval(speedTimer); speedTimer = null }
       if (leftBlinkTimer) { clearInterval(leftBlinkTimer); leftBlinkTimer = null }
       if (rightBlinkTimer) { clearInterval(rightBlinkTimer); rightBlinkTimer = null }
+      // Kill any still-pending setRoute() timeouts too — otherwise turning the
+      // engine off mid-transition doesn't actually stop the trip: the leftover
+      // 1000ms/2400ms callbacks fire later anyway and silently finish the
+      // route change (currentRoute, transitPhase, transitioning) even though
+      // the engine is now off.
+      clearRouteTransitionTimers()
       set({
         engineOn: false, headlightsOn: false,
         leftIndicatorOn: false, rightIndicatorOn: false, leftIndicatorLit: false, rightIndicatorLit: false,
@@ -152,7 +164,12 @@ const useStore = create((set, get) => ({
     playEngineRev()
 
     if (speedTimer) clearInterval(speedTimer)
-    setTimeout(() => set({ transitPhase: 'moving' }), 400)
+    // Any timeouts left over from a previous (interrupted) route change must
+    // die here — otherwise their callbacks fire later and stomp on this
+    // transition's state (e.g. resetting transitPhase back to 'arriving' or
+    // 'idle' mid-flight, or overwriting currentRoute with the old target).
+    clearRouteTransitionTimers()
+    routeTransitionTimers.push(setTimeout(() => set({ transitPhase: 'moving' }), 400))
     let sp = 0
     const cruise = 52 + Math.random() * 10 // ~52-62 km/h cruising speed, varies per trip
     speedTimer = setInterval(() => {
@@ -163,7 +180,7 @@ const useStore = create((set, get) => ({
       }
       set({ speed: Math.round(sp) })
     }, 160)
-    setTimeout(() => {
+    routeTransitionTimers.push(setTimeout(() => {
       set({
         currentRoute: idx,
         transitPhase: 'arriving',
@@ -171,11 +188,11 @@ const useStore = create((set, get) => ({
       })
       setAmbientRoute(idx)
       persist(get())
-    }, 1000)
-    setTimeout(() => {
+    }, 1000))
+    routeTransitionTimers.push(setTimeout(() => {
       clearInterval(speedTimer)
       set({ transitioning: false, transitPhase: 'idle', speed: 0 })
-    }, 2400)
+    }, 2400))
   },
 
   setRadioStation: (idx) => {
@@ -284,6 +301,7 @@ const useStore = create((set, get) => ({
       if (speedTimer) { clearInterval(speedTimer); speedTimer = null }
       if (leftBlinkTimer) { clearInterval(leftBlinkTimer); leftBlinkTimer = null }
       if (rightBlinkTimer) { clearInterval(rightBlinkTimer); rightBlinkTimer = null }
+      clearRouteTransitionTimers()
       if (s.ambientSound) stopAmbient()
       if (!s.muted) setMuted(true)
       if (s.playerMode === 'radio') stopRadio()

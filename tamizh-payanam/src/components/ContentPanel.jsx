@@ -161,7 +161,7 @@ const styles = {
   titleTamil: {
     fontFamily: "'Noto Sans Tamil', sans-serif",
     fontSize: 13,
-    color: '#666',
+    color: '#B7A98A',
     marginTop: 1,
   },
   closeBtn: {
@@ -170,7 +170,7 @@ const styles = {
     borderRadius: '50%',
     width: 28,
     height: 28,
-    color: '#666',
+    color: '#F5EDD6',
     cursor: 'pointer',
     fontSize: 12,
     display: 'flex',
@@ -196,14 +196,14 @@ const styles = {
   },
   sectionNum: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 10,
-    color: '#444',
+    fontSize: 11,
+    color: '#B7A98A',
     letterSpacing: 1,
   },
   sectionBody: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 11,
-    color: '#888',
+    fontSize: 12,
+    color: '#D9CFB8',
     lineHeight: 1.7,
     paddingLeft: 20,
   },
@@ -215,8 +215,8 @@ const styles = {
   },
   footerText: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 9,
-    color: '#333',
+    fontSize: 12,
+    color: '#B7A98A',
     letterSpacing: 3,
   },
 }

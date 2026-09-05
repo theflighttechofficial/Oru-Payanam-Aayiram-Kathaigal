@@ -150,6 +150,12 @@ export default function TamizhRadio() {
     if (!introSongActive || !playerReady || !ytPlayerRef.current) return
     introModeRef.current = true
     setNowPlaying('', 0)
+    // Reset before loading — otherwise a stale `isPlaying: true` from a prior
+    // track renders the Pause icon while the intro song is still
+    // UNSTARTED/CUED. Clicking Pause then hits a video that was never
+    // playing, YouTube never fires PAUSED for that, and the button gets
+    // stuck showing Pause forever with no further clicks doing anything.
+    setPlaying(false)
     try {
       ytPlayerRef.current.loadVideoById(INTRO_SONG_ID)
       ytPlayerRef.current.setVolume(volume)
@@ -191,8 +197,14 @@ export default function TamizhRadio() {
       // A manual pause just pauses — the welcome song stays loaded and
       // resumable. Intro mode only actually ends when it plays through to
       // the end on its own, or the visitor loads a different tape.
+      // Consult the real player state rather than trusting `isPlaying`
+      // alone — if the video is still UNSTARTED/BUFFERING/CUED (not truly
+      // PLAYING yet), pausing it never fires a PAUSED event, which would
+      // otherwise leave `isPlaying` stuck and the button unresponsive.
       try {
-        if (isPlaying) ytPlayerRef.current.pauseVideo()
+        const state = ytPlayerRef.current.getPlayerState?.()
+        const reallyPlaying = state === window.YT?.PlayerState?.PLAYING
+        if (reallyPlaying) ytPlayerRef.current.pauseVideo()
         else ytPlayerRef.current.playVideo()
       } catch (err) {}
       return
@@ -206,7 +218,9 @@ export default function TamizhRadio() {
       return
     }
     try {
-      if (isPlaying) ytPlayerRef.current.pauseVideo()
+      const state = ytPlayerRef.current.getPlayerState?.()
+      const reallyPlaying = state === window.YT?.PlayerState?.PLAYING
+      if (reallyPlaying) ytPlayerRef.current.pauseVideo()
       else ytPlayerRef.current.playVideo()
     } catch (err) {}
   }
@@ -427,7 +441,7 @@ const styles = {
   bandBtn: {
     background: 'linear-gradient(180deg, #3a3c40 0%, #232427 100%)',
     border: '1px solid #17181a', borderTop: '1px solid #5a5d62',
-    borderRadius: 3, color: '#9a9da2', fontFamily: "'Courier Prime', monospace", fontSize: 8,
+    borderRadius: 3, color: '#c8cbd0', fontFamily: "'Courier Prime', monospace", fontSize: 11,
     padding: '3px 7px', cursor: 'pointer', letterSpacing: 1, fontWeight: 700,
     boxShadow: '0 2px 0 #0a0a0a',
   },
@@ -461,11 +475,11 @@ const styles = {
     display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2,
   },
   lcdBand: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 9, fontWeight: 700,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, fontWeight: 700,
     color: '#2a3a1a', letterSpacing: 1,
   },
   lcdDot: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 7, fontWeight: 700,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, fontWeight: 700,
     color: '#2a3a1a', letterSpacing: 1,
   },
   lcdTrack: {
@@ -509,13 +523,13 @@ const styles = {
     width: 2, height: 7, background: '#D89B24', borderRadius: 2,
   },
   volLabel: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#c8cbd0', letterSpacing: 1, marginTop: 3,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#c8cbd0', letterSpacing: 1, marginTop: 3,
   },
   rackBtnWrap: { position: 'relative', flexShrink: 0 },
   rackBtn: {
     background: 'linear-gradient(180deg, #3a3c40 0%, #232427 100%)',
     border: '1px solid #17181a', borderTop: '1px solid #5a5d62', borderRadius: 4,
-    color: '#D89B24', fontFamily: "'Courier Prime', monospace", fontSize: 9,
+    color: '#D89B24', fontFamily: "'Courier Prime', monospace", fontSize: 11,
     padding: '7px 10px', cursor: 'pointer', letterSpacing: 1, flexShrink: 0,
     boxShadow: '0 2px 0 #0a0a0a',
   },
@@ -555,7 +569,7 @@ const styles = {
     textShadow: '0 1px 0 rgba(0,0,0,0.7), 0 0 8px rgba(255,255,255,0.12)',
   },
   namePlateModel: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 9, fontWeight: 700,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, fontWeight: 700,
     color: '#D89B24', letterSpacing: 2, lineHeight: 1.4, marginTop: 1,
   },
 }

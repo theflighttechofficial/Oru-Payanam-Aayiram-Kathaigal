@@ -87,8 +87,14 @@ function getEngineEl() {
   }
   return engineEl
 }
+// Tracks whichever fade (in or out) is currently running, so rapidly
+// toggling the engine on/off/on can't leave two intervals fighting over
+// el.volume at once (which made the volume jump erratically, and could
+// even pause the element out from under a fade-in still trying to raise it).
+let engineFadeTimer = null
 export function startEngineHum() {
   if (muted) return
+  if (engineFadeTimer) { clearInterval(engineFadeTimer); engineFadeTimer = null }
   const el = getEngineEl()
   el.muted = false
   el.volume = 0
@@ -98,22 +104,23 @@ export function startEngineHum() {
   const target = 0.32
   const steps = 12
   let i = 0
-  const t = setInterval(() => {
+  engineFadeTimer = setInterval(() => {
     i++
     el.volume = Math.min(target, (target * i) / steps)
-    if (i >= steps) clearInterval(t)
+    if (i >= steps) { clearInterval(engineFadeTimer); engineFadeTimer = null }
   }, 40)
 }
 export function stopEngineHum() {
   if (!engineEl) return
+  if (engineFadeTimer) { clearInterval(engineFadeTimer); engineFadeTimer = null }
   const el = engineEl
   const steps = 8
   let i = 0
   const startVol = el.volume
-  const t = setInterval(() => {
+  engineFadeTimer = setInterval(() => {
     i++
     el.volume = Math.max(0, startVol * (1 - i / steps))
-    if (i >= steps) { clearInterval(t); el.pause() }
+    if (i >= steps) { clearInterval(engineFadeTimer); engineFadeTimer = null; el.pause() }
   }, 30)
 }
 
@@ -234,7 +241,7 @@ let radioToneGain = null
 let radioToneFilter = null
 let radioLFO = null
 let radioStaticGain = null
-let radioVolumeFrac = 0.75
+let radioVolumeFrac = 1.0
 let radioEnabled = false
 let radioMelodyTimeout = null
 

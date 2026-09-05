@@ -121,7 +121,7 @@ export default function NightScene({ route }) {
           {[840,860,880].map(x => (
             <circle key={x} cx={x} cy="75" r="2.5" fill="#F3C94B" opacity="0.7" />
           ))}
-          <text x="860" y="310" textAnchor="middle" fill="#D89B24" fontFamily="Noto Sans Tamil" fontSize="8" opacity="0.7">கோபுரம்</text>
+          <text x="860" y="310" textAnchor="middle" fill="#D89B24" fontFamily="Noto Sans Tamil" fontSize="11" opacity="0.9">கோபுரம்</text>
         </g>
       )}
 
@@ -219,8 +219,8 @@ export default function NightScene({ route }) {
           <rect x="556" y="248" width="10" height="24" fill="#0d0808" rx="4" transform="rotate(20,561,260)" />
           {/* Film star name */}
           <rect x="504" y="290" width="82" height="18" fill="#cc2222" />
-          <text x="545" y="302" textAnchor="middle" fill="#fff" fontFamily="Noto Sans Tamil" fontSize="8" fontWeight="700">சூப்பர் ஸ்டார்</text>
-          <text x="545" y="322" textAnchor="middle" fill="#D89B24" fontFamily="Courier Prime" fontSize="8">★ 1983 ★</text>
+          <text x="545" y="302" textAnchor="middle" fill="#fff" fontFamily="Noto Sans Tamil" fontSize="11" fontWeight="700">சூப்பர் ஸ்டார்</text>
+          <text x="545" y="322" textAnchor="middle" fill="#D89B24" fontFamily="Courier Prime" fontSize="11">★ 1983 ★</text>
         </g>
       )}
 
@@ -233,14 +233,14 @@ export default function NightScene({ route }) {
         {/* Cabin windshield */}
         <rect x="886" y="242" width="66" height="50" fill="#0a1808" rx="3" stroke="#1a3510" strokeWidth="1" />
         {/* Cabin text */}
-        <text x="919" y="272" textAnchor="middle" fill="#D89B24" fontFamily="Noto Sans Tamil" fontSize="7" opacity="0.8">ஆசிரவாகனம்</text>
+        <text x="919" y="272" textAnchor="middle" fill="#D89B24" fontFamily="Noto Sans Tamil" fontSize="11" opacity="0.95">ஆசிரவாகனம்</text>
         {/* Truck side art - painted floral motifs */}
         <rect x="685" y="265" width="250" height="82" fill="#150d05" rx="3" />
         {/* Decorative border on truck */}
         <rect x="687" y="267" width="246" height="78" fill="none" stroke="#D89B24" strokeWidth="1" rx="2" opacity="0.4" />
         {/* Truck name */}
         <text x="810" y="302" textAnchor="middle" fill="#8C3026" fontFamily="Courier Prime" fontSize="11" fontWeight="700" opacity="0.9">ASHOK LEYLAND</text>
-        <text x="810" y="320" textAnchor="middle" fill="#D89B24" fontFamily="Noto Sans Tamil" fontSize="10" opacity="0.7">தமிழ் நாடு</text>
+        <text x="810" y="320" textAnchor="middle" fill="#D89B24" fontFamily="Noto Sans Tamil" fontSize="11" opacity="0.9">தமிழ் நாடு</text>
         {/* Decorative flower motifs (authentic truck art) */}
         {[710,750,800,850,900].map(x => (
           <g key={x}>

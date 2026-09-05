@@ -55,8 +55,8 @@ const styles = {
   scroll: {
     display: 'inline-block',
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 10,
-    color: '#7acca0',
+    fontSize: 12,
+    color: '#9be0b8',
     letterSpacing: 1,
     animationName: 'tickerScroll',
     animationTimingFunction: 'linear',

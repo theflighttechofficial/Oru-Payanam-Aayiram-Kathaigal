@@ -109,9 +109,9 @@ const styles = {
   },
   headerText: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 9,
+    fontSize: 11,
     letterSpacing: 2,
-    color: '#555',
+    color: '#B7A98A',
   },
   flipViewport: {
     perspective: 300,
@@ -160,8 +160,8 @@ const styles = {
   },
   routeNum: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 10,
-    color: '#555',
+    fontSize: 11,
+    color: '#B7A98A',
     letterSpacing: 2,
   },
   leds: {
@@ -180,8 +180,8 @@ const styles = {
   },
   ledLabel: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 8,
-    color: '#444',
+    fontSize: 11,
+    color: '#B7A98A',
     letterSpacing: 2,
   },
 }

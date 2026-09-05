@@ -19,7 +19,7 @@ export default function Dashboard() {
           <span style={styles.gaugeUnit}>km/h</span>
         </div>
         <div style={styles.gauge}>
-          <span style={{ ...styles.gaugeVal, fontSize: 13, color: engineOn ? '#7acca0' : '#444' }}>{engineOn ? 'F' : '—'}</span>
+          <span style={{ ...styles.gaugeVal, fontSize: 13, color: engineOn ? '#7acca0' : '#8a9a8a' }}>{engineOn ? 'F' : '—'}</span>
           <span style={styles.gaugeUnit}>fuel</span>
         </div>
       </div>
@@ -107,9 +107,9 @@ const styles = {
   },
   label: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 2,
-    color: '#555',
+    color: '#B7A98A',
     marginBottom: 6,
     textAlign: 'center',
   },
@@ -134,8 +134,8 @@ const styles = {
   },
   gaugeUnit: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 7,
-    color: '#3a6a3a',
+    fontSize: 11,
+    color: '#7acca0',
     letterSpacing: 1,
   },
   switchBtn: {
@@ -159,14 +159,14 @@ const styles = {
   },
   switchLabel: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: 700,
     color: '#D89B24',
     letterSpacing: 0.5,
   },
   switchSub: {
     fontFamily: "'Noto Sans Tamil', sans-serif",
-    fontSize: 7,
-    color: '#666',
+    fontSize: 10,
+    color: '#B7A98A',
   },
 }

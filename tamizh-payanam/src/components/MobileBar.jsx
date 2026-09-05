@@ -52,7 +52,7 @@ const styles = {
   },
   lbl: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 8,
+    fontSize: 11,
     letterSpacing: 1,
   },
 }

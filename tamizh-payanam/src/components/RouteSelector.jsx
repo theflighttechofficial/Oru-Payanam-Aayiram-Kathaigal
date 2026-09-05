@@ -47,7 +47,7 @@ export default function RouteSelector() {
               <span style={{
                 ...styles.routeNum,
                 background: isActive ? '#8C3026' : '#1a1a1a',
-                color: isActive ? '#fff' : '#666',
+                color: isActive ? '#fff' : '#D9CFB8',
               }}>
                 {route.routeNum}
               </span>
@@ -81,16 +81,16 @@ const styles = {
   },
   boardLabel: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 9,
+    fontSize: 12,
     letterSpacing: 2,
-    color: '#333',
+    color: '#B7A98A',
     marginBottom: 8,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  boardLabelText: { color: '#444' },
+  boardLabelText: { color: '#D9CFB8' },
   ignHint: {
     fontFamily: "'Courier Prime', monospace",
     fontSize: 13,
@@ -124,7 +124,7 @@ const styles = {
   },
   routeNum: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: 700,
     padding: '2px 4px',
     borderRadius: 2,
@@ -132,14 +132,14 @@ const styles = {
     flexShrink: 0,
   },
   btnEng: {
-    fontSize: 10,
+    fontSize: 12,
     letterSpacing: 1,
     fontWeight: 700,
     lineHeight: 1,
   },
   explored: {
-    fontSize: 9,
-    color: '#2E8B57',
+    fontSize: 12,
+    color: '#7acca0',
     fontWeight: 700,
   },
   activeDot: {

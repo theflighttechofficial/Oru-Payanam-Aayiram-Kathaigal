@@ -69,7 +69,7 @@ const styles = {
   },
   depot: {
     fontFamily: "'Courier Prime', monospace",
-    fontSize: 11, color: '#4a6a4a', letterSpacing: 2, marginTop: 6, marginBottom: 28,
+    fontSize: 12, color: '#8C9C7C', letterSpacing: 2, marginTop: 6, marginBottom: 28,
   },
   checklist: { textAlign: 'left', display: 'inline-block' },
   line: {

@@ -129,11 +129,11 @@ const styles = {
     textShadow: '0 1px 0 rgba(0,0,0,0.7)',
   },
   brandModel: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 7, fontWeight: 700,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, fontWeight: 700,
     color: '#D89B24', letterSpacing: 1,
   },
   title: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 8, fontWeight: 700, color: '#9a9da2',
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, fontWeight: 700, color: '#cfd1d4',
     letterSpacing: 1, marginTop: 3,
   },
   closeBtn: {
@@ -143,7 +143,7 @@ const styles = {
     boxShadow: '0 2px 0 #0a0a0a',
   },
   section: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 8, color: '#7d8085', fontWeight: 700,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#cfd1d4', fontWeight: 700,
     letterSpacing: 2, marginTop: 10, marginBottom: 6, borderTop: '1px solid rgba(0,0,0,0.4)', paddingTop: 8,
   },
   grid: { display: 'flex', flexDirection: 'column', gap: 6 },
@@ -164,13 +164,13 @@ const styles = {
     border: '1px solid #5a5d62',
   },
   cassetteName: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 9, color: '#D89B24',
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#D89B24',
     fontWeight: 700, letterSpacing: 0.5, marginTop: 4,
   },
-  cassetteNameT: { fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 7, color: '#8a8d92' },
-  cassetteMeta: { fontFamily: "'Courier Prime', monospace", fontSize: 6, color: '#6a6d72', marginTop: 2, letterSpacing: 1 },
-  lock: { position: 'absolute', top: 4, right: 5, fontSize: 8 },
+  cassetteNameT: { fontFamily: "'Noto Sans Tamil', sans-serif", fontSize: 11, color: '#c7cad0' },
+  cassetteMeta: { fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#9a9da2', marginTop: 2, letterSpacing: 1 },
+  lock: { position: 'absolute', top: 4, right: 5, fontSize: 11 },
   playing: {
-    fontFamily: "'Courier Prime', monospace", fontSize: 7, color: '#F3C94B', display: 'block', marginTop: 2,
+    fontFamily: "'Courier Prime', monospace", fontSize: 11, color: '#F3C94B', display: 'block', marginTop: 2,
   },
 }
