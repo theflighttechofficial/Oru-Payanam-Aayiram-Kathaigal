@@ -12,6 +12,22 @@ export default function TapeRack() {
     exploredRoutes, currentRoute, setRoute, transitioning,
   } = useStore()
 
+  // Region cassettes with their own real playlist (Chennai, Madurai, …) load
+  // straight into the tape deck when picked, on top of driving the bus there —
+  // a separate, city-specific tape rather than one of the curated TAPES.
+  const loadRegionTape = (route) => {
+    if (!route.ytPlaylistId) return
+    loadTape({
+      id: `route-${route.id}`,
+      label: route.nameT,
+      labelEng: route.name,
+      side: 'A', era: '',
+      ytPlaylistId: route.ytPlaylistId,
+      ytStartIndex: 0,
+      tracks: [],
+    })
+  }
+
   if (!showTapeRack) return null
 
   return (
@@ -69,7 +85,11 @@ export default function TapeRack() {
           return (
             <div
               key={i}
-              onClick={() => unlocked && !transitioning && setRoute(i)}
+              onClick={() => {
+                if (!unlocked || transitioning) return
+                setRoute(i)
+                loadRegionTape(r)
+              }}
               title={unlocked ? `Drive to ${r.name}` : 'Not yet visited'}
               style={{
                 ...styles.cassette,

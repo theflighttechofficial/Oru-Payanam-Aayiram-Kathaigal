@@ -36,6 +36,7 @@ function persist(state) {
       exploredRoutes: [...state.exploredRoutes],
       muted: state.muted,
       currentRoute: state.currentRoute,
+      booted: state.booted,
     }))
   } catch (e) {}
 }
@@ -43,7 +44,12 @@ function persist(state) {
 const saved = loadSave()
 
 const useStore = create((set, get) => ({
-  booted: false,          // intro/loading gate
+  // Restored from sessionStorage so that anything which re-mounts the app
+  // within the same tab (exiting the Fullscreen API can do this in some
+  // browsers/embeds, since the fullscreen element gets torn down and
+  // recreated) doesn't dump the visitor back on the boot/diagnostics
+  // screen after they've already boarded.
+  booted: saved.booted ?? false,          // intro/loading gate
   currentRoute: saved.currentRoute ?? 0,
   transitioning: false,
   transitPhase: 'idle', // idle | cranking | moving | arriving
@@ -94,6 +100,7 @@ const useStore = create((set, get) => ({
     setAmbientRoute(get().currentRoute)
     if (get().ambientSound) startAmbient()
     set({ booted: true })
+    persist(get())
   },
 
   toggleAmbient: () => set((s) => {

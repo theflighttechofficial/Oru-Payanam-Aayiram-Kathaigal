@@ -40,11 +40,15 @@ export default function App() {
   const [showFsHint, setShowFsHint] = useState(false)
   const musicPlaying = radioPlaying || isPlaying
 
-  // Fullscreen hint — shows as soon as the intro finishes booting, once per visit
+  // Fullscreen hint — shows as soon as the intro finishes booting, once per visit.
+  // Guarded by a ref (not just the `booted`/`fullscreen` deps) because this effect
+  // re-runs every time `fullscreen` toggles — without the guard, exiting fullscreen
+  // after the visitor already dismissed the hint would pop it right back up.
+  const fsHintShownRef = useRef(false)
   useEffect(() => {
-    if (!booted || fullscreen) return
+    if (!booted || fullscreen || fsHintShownRef.current) return
+    fsHintShownRef.current = true
     setShowFsHint(true)
-    return undefined
   }, [booted, fullscreen])
 
   // Welcome song — once the visitor is in fullscreen AND has hidden the bus,

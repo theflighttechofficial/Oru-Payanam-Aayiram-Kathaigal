@@ -110,11 +110,14 @@ export default function TamizhRadio() {
       introModeRef.current = false
       cancelIntroSong()
     }
-    // Hard-stop whatever was previously loaded before switching, and clear
-    // the displayed title immediately — otherwise the old tape's audio (or
-    // its stale title) can bleed into the new tape while the new playlist
-    // is still loading, making the switch look broken or mixed up.
-    try { ytPlayerRef.current.stopVideo() } catch (err) {}
+    // Clear the displayed title immediately — otherwise the old tape's
+    // stale title can bleed into the new tape while the new playlist is
+    // still loading, making the switch look broken or mixed up. Note: we
+    // deliberately do NOT call stopVideo() here — loadPlaylist() already
+    // replaces whatever was previously loaded/playing, and calling
+    // stopVideo() right before it marks the player as "explicitly
+    // stopped," which suppresses loadPlaylist's automatic playback — the
+    // new tape would load (cued) but never actually start playing.
     setPlaying(false)
     setNowPlaying('', 0)
     if (!deckTape.ytPlaylistId || deckTape.ytPlaylistId.startsWith('PLACEHOLDER')) {
@@ -128,6 +131,10 @@ export default function TamizhRadio() {
       ytPlayerRef.current.loadPlaylist({ list: deckTape.ytPlaylistId, listType: 'playlist', index: deckTape.ytStartIndex || 0 })
       ytPlayerRef.current.setLoop(true)
       ytPlayerRef.current.setVolume(volume)
+      // Belt-and-braces: force playback explicitly rather than relying
+      // solely on loadPlaylist's implicit autoplay, so a switch never
+      // silently ends up loaded-but-paused.
+      ytPlayerRef.current.playVideo()
     } catch (err) {
       showToast('⚠ TAPE UNREADABLE — check playlist ID')
     }

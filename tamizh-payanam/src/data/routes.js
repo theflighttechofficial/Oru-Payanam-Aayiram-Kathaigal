@@ -19,6 +19,9 @@ export const ROUTES = [
     passType: 'GEN',
     ambience: ['🌊 Marina waves', '🚗 Metro traffic', '📻 Radio music'],
     highlights: ['George Town', 'Kapaleeshwarar Temple', 'Marina Beach', 'Fort St. George'],
+    // Region cassette — loaded into the tape deck when this cassette is
+    // selected from the rack, separate from the curated TAPES playlists.
+    ytPlaylistId: 'PLABtVeGpkEV2maQ1mdDnw8_slyYi869tZ',
   },
   {
     id: 1,
@@ -40,6 +43,9 @@ export const ROUTES = [
     passType: 'SIT',
     ambience: ['🔔 Temple bells', '🎵 Nadaswaram', '🕯️ Deepam glow'],
     highlights: ['Brihadeeswarar Temple', 'Tanjore Palace', 'Saraswathi Mahal', 'Bronze Museum'],
+    // Region cassette — loaded into the tape deck when this cassette is
+    // selected from the rack, separate from the curated TAPES playlists.
+    ytPlaylistId: 'PLnO8uDr9uT6Elyipct9SiAXh2s_SfHshD',
   },
   {
     id: 2,
@@ -62,6 +68,9 @@ export const ROUTES = [
     passType: 'SIT',
     ambience: ['🌺 Jasmine fragrance', '🛕 Temple crowd', '🥤 Jigarthanda stall'],
     highlights: ['Meenakshi Amman Temple', 'Thirumalai Nayakkar Palace', 'Vandiyur Mariamman Teppakulam', 'Gandhi Museum'],
+    // Region cassette — loaded into the tape deck when this cassette is
+    // selected from the rack, separate from the curated TAPES playlists.
+    ytPlaylistId: 'PL_DaWb6RFQc2UqJNHQ1TQ9RB-uACJ-ZNv',
   },
   {
     id: 3,
@@ -84,6 +93,9 @@ export const ROUTES = [
     passType: 'EXP',
     ambience: ['🌊 Ocean breeze', '💨 Sea wind', '🌅 Horizon glow'],
     highlights: ['Vivekananda Rock Memorial', 'Thiruvalluvar Statue', 'Kumari Amman Temple', 'Sunset Point'],
+    // Region cassette — loaded into the tape deck when this cassette is
+    // selected from the rack, separate from the curated TAPES playlists.
+    ytPlaylistId: 'PLqnv9oUBaKl0UZb8azan6oHUVJDmOyh55',
   },
   {
     id: 4,
@@ -106,6 +118,9 @@ export const ROUTES = [
     passType: 'EXP',
     ambience: ['🌿 Tea leaf scent', '🚂 Toy train whistle', '🌫️ Mountain mist'],
     highlights: ['Ooty Lake', 'Botanical Gardens', 'Doddabetta Peak', 'Nilgiri Mountain Railway'],
+    // Region cassette — loaded into the tape deck when this cassette is
+    // selected from the rack, separate from the curated TAPES playlists.
+    ytPlaylistId: 'PL0bIemAUX5jCk1KiiW_Lze1PMpTV2no8n',
   },
   {
     id: 5,
