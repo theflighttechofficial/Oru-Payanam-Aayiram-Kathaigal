@@ -124,20 +124,45 @@ export default function TamizhRadio() {
       showToast(`⚠ No playlist set for ${deckTape.labelEng} yet`)
       return
     }
+    let cancelled = false
+    const startIndex = deckTape.ytStartIndex || 0
     try {
-      // Load the full real playlist, starting at the tape's preferred track
-      // (if any) and loop it, so ⏭ steps through every track and wraps back
-      // around to the start of the whole playlist at the end.
-      ytPlayerRef.current.loadPlaylist({ list: deckTape.ytPlaylistId, listType: 'playlist', index: deckTape.ytStartIndex || 0 })
+      // Load the full real playlist and loop it, so ⏭ steps through every
+      // track and wraps back around to the start of the whole playlist at
+      // the end. Deliberately NOT passing a non-zero `index` into
+      // loadPlaylist() here — the YouTube IFrame API's loadPlaylist({index})
+      // option is unreliable: with a non-zero index it frequently cues the
+      // track but never actually starts playback (stays UNSTARTED/CUED
+      // forever, immune even to an explicit playVideo() retry), while the
+      // exact same call with index 0 (the default) always plays instantly.
+      // Instead we always load at the start, then jump to the tape's
+      // preferred track with playVideoAt() below, which is the API's
+      // purpose-built, reliable method for seeking to a playlist position.
+      ytPlayerRef.current.loadPlaylist({ list: deckTape.ytPlaylistId, listType: 'playlist' })
       ytPlayerRef.current.setLoop(true)
       ytPlayerRef.current.setVolume(volume)
-      // Belt-and-braces: force playback explicitly rather than relying
-      // solely on loadPlaylist's implicit autoplay, so a switch never
-      // silently ends up loaded-but-paused.
-      ytPlayerRef.current.playVideo()
     } catch (err) {
       showToast('⚠ TAPE UNREADABLE — check playlist ID')
+      return
     }
+    // Belt-and-braces fallback: if the player still isn't playing/buffering
+    // shortly after, nudge it with an explicit playVideo(). This is
+    // deliberately DELAYED rather than fired right after loadPlaylist() —
+    // loadPlaylist() is async (it posts a message and loads in the
+    // background), so calling playVideo() in the same tick can race with
+    // that still-in-progress load: it can briefly play the not-yet-fully-
+    // switched player, which then gets reset once the real load catches
+    // up, leaving playback stuck after a one-second flash. Once playback
+    // has actually started, jump to the tape's preferred track index (if
+    // any) with playVideoAt — this itself also always starts playing.
+    const t = setTimeout(() => {
+      if (cancelled || !ytPlayerRef.current) return
+      const state = ytPlayerRef.current.getPlayerState?.()
+      const settled = state === window.YT?.PlayerState?.PLAYING || state === window.YT?.PlayerState?.BUFFERING
+      if (!settled) { try { ytPlayerRef.current.playVideo() } catch (err) {} }
+      if (startIndex > 0) { try { ytPlayerRef.current.playVideoAt(startIndex) } catch (err) {} }
+    }, 400)
+    return () => { cancelled = true; clearTimeout(t) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckTape, playerReady])
 
@@ -145,11 +170,22 @@ export default function TamizhRadio() {
   // YouTube tape audio too, which the store can't reach directly since this
   // component owns the player instance. Exception: the welcome song is
   // *meant* to play precisely while the bus is hidden, so don't cut it.
+  // This must fire only once, exactly at the moment busHidden flips to
+  // true — NOT on every later `isPlaying` change while it stays true.
+  // It used to depend on [busHidden, isPlaying], which re-ran this pause
+  // any time isPlaying turned true again for an unrelated reason — e.g. the
+  // visitor finding the tape deck and loading a real tape while the bus is
+  // still hidden (a supported flow: it cancels intro mode and starts
+  // playing) — immediately re-paused that new tape a moment after it
+  // started, and kept doing so on every subsequent play attempt, making
+  // the deck look permanently stuck.
+  const prevBusHiddenRef = useRef(false)
   useEffect(() => {
-    if (busHidden && ytPlayerRef.current && isPlaying && !introModeRef.current) {
+    if (busHidden && !prevBusHiddenRef.current && ytPlayerRef.current && isPlaying && !introModeRef.current) {
       try { ytPlayerRef.current.pauseVideo() } catch (err) {}
     }
-  }, [busHidden, isPlaying])
+    prevBusHiddenRef.current = busHidden
+  }, [busHidden])
 
   // Welcome song — fires once, standalone (not part of a tape's playlist),
   // when the visitor goes fullscreen and hides the bus for the first time.
