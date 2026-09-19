@@ -268,11 +268,25 @@ const useStore = create((set, get) => ({
   // the player instance) — see setNowPlayingTitle below. currentTrackIndex
   // just mirrors the player's live playlist position for display.
   loadTape: (tape) => {
+    // No-op if this tape is already the one loaded. Without this guard,
+    // re-clicking the already-playing cassette resets isPlaying/nowPlayingTitle
+    // in the store to "loading" every time — but since the tape reference is
+    // unchanged, TamizhRadio's loading effect (keyed on the deckTape object)
+    // never re-fires to actually reload or resync anything. The result: the
+    // LCD shows "Loading…"/STOP and the Play/Pause button falls out of sync
+    // forever, even though the track is still actually playing underneath,
+    // until the next natural track change happens to correct it.
+    if (get().deckTape?.id === tape.id) return
     playClick()
     set({ deckTape: tape, activeTape: tape, currentTrackIndex: 0, nowPlayingTitle: '', playerMode: 'tape', isPlaying: false })
     get().showToast(`📼 ${tape.labelEng} loaded`)
   },
-  ejectTape: () => {
+  ejectTape: (expectedId) => {
+    // Guard against a delayed eject (see TamizhRadio's eject-animation
+    // timeout) clobbering a DIFFERENT tape the visitor loaded in the
+    // meantime — only actually eject if the deck still holds what we
+    // expect it to.
+    if (expectedId !== undefined && get().deckTape?.id !== expectedId) return
     playClick()
     set({ deckTape: null, activeTape: null, isPlaying: false, nowPlayingTitle: '' })
   },

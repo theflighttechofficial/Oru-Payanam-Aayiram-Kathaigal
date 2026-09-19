@@ -81,7 +81,16 @@ export default function TapeRack() {
       <div style={styles.grid}>
         {ROUTES.map((r, i) => {
           const unlocked = exploredRoutes.has(i)
-          const active = currentRoute === i
+          const driving = currentRoute === i
+          // Whether THIS cassette's own tape is actually the one loaded in
+          // the deck — separate from `driving`. These used to be conflated
+          // (highlighting purely on currentRoute), which was fine back when
+          // region cassettes only drove the bus, but now that picking one
+          // also loads its own playlist, that made the "▶ NOW" glow
+          // misleading: e.g. after loading a different tape (or ejecting),
+          // the cassette for the route you're still driving on kept
+          // glowing as if its music were playing, when it wasn't.
+          const tapeActive = deckTape?.id === `route-${r.id}`
           return (
             <div
               key={i}
@@ -93,7 +102,10 @@ export default function TapeRack() {
               title={unlocked ? `Drive to ${r.name}` : 'Not yet visited'}
               style={{
                 ...styles.cassette,
-                borderColor: active ? '#F3C94B' : unlocked ? 'rgba(46,139,87,0.55)' : '#0a0a0a',
+                borderColor: tapeActive ? '#F3C94B' : driving ? 'rgba(216,155,36,0.5)' : unlocked ? 'rgba(46,139,87,0.55)' : '#0a0a0a',
+                boxShadow: tapeActive
+                  ? '0 0 12px rgba(243,201,75,0.4), inset 0 1px 0 rgba(255,255,255,0.1)'
+                  : 'inset 0 1px 0 rgba(255,255,255,0.06)',
                 opacity: unlocked ? 1 : 0.4,
                 cursor: unlocked ? 'pointer' : 'default',
               }}
@@ -107,7 +119,8 @@ export default function TapeRack() {
               <div style={styles.cassetteName}>{r.name.toUpperCase()}</div>
               <div style={styles.cassetteNameT}>{r.nameT}</div>
               {!unlocked && <span style={styles.lock}>🔒</span>}
-              {unlocked && active && <span style={styles.playing}>▶ NOW</span>}
+              {unlocked && tapeActive && <span style={styles.playing}>▶ IN DECK</span>}
+              {unlocked && driving && !tapeActive && <span style={styles.playing}>📍 HERE</span>}
             </div>
           )
         })}

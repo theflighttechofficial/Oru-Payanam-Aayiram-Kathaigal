@@ -25,7 +25,10 @@ export default function TamizhRadio() {
   const hiddenPlayerRef = useRef(null)
   const progressTimerRef = useRef(null)
   const errorStreakRef = useRef(0)
+  const gaveUpRef = useRef(false)
   const introModeRef = useRef(false)
+  const userNavigatedRef = useRef(false)
+  const fallbackTimerRef = useRef(null)
 
   const station = RADIO_STATIONS[radioStation]
   const song = SONGS[radioStation]
@@ -68,14 +71,21 @@ export default function TamizhRadio() {
               endIntroSong()
               return
             }
+            // Once a playlist has been declared broken, stop reacting to
+            // further errors from it entirely — without this, the streak
+            // counter used to reset to 0 after giving up, so a totally
+            // broken playlist (e.g. every track region-locked) would just
+            // start counting again and re-spam the same "keeps blocking"
+            // toast every 5 tracks indefinitely instead of actually stopping.
+            if (gaveUpRef.current) return
             // 101/150 = embedding disabled by the uploader, 100 = video removed/private
             errorStreakRef.current += 1
             if (errorStreakRef.current >= 5) {
               // The whole playlist (or a long run of it) is refusing to embed —
               // stop hammering it and say so clearly instead of looping forever.
+              gaveUpRef.current = true
               setPlaying(false)
               showToast('⚠ This playlist keeps blocking embedded playback — try a different one')
-              errorStreakRef.current = 0
               return
             }
             showToast('⚠ TRACK UNAVAILABLE — skipping')
@@ -112,57 +122,87 @@ export default function TamizhRadio() {
     }
     // Clear the displayed title immediately — otherwise the old tape's
     // stale title can bleed into the new tape while the new playlist is
-    // still loading, making the switch look broken or mixed up. Note: we
-    // deliberately do NOT call stopVideo() here — loadPlaylist() already
-    // replaces whatever was previously loaded/playing, and calling
-    // stopVideo() right before it marks the player as "explicitly
-    // stopped," which suppresses loadPlaylist's automatic playback — the
-    // new tape would load (cued) but never actually start playing.
+    // still loading, making the switch look broken or mixed up.
     setPlaying(false)
     setNowPlaying('', 0)
+    // Reset the error-streak counter for every new tape — otherwise a run of
+    // failed tracks on the PREVIOUS tape carries over and can trip the
+    // "this playlist keeps blocking embedded playback" give-up toast after
+    // just one or two failures on a perfectly fine new playlist.
+    errorStreakRef.current = 0
+    gaveUpRef.current = false
+    userNavigatedRef.current = false
     if (!deckTape.ytPlaylistId || deckTape.ytPlaylistId.startsWith('PLACEHOLDER')) {
       showToast(`⚠ No playlist set for ${deckTape.labelEng} yet`)
       return
     }
     let cancelled = false
     const startIndex = deckTape.ytStartIndex || 0
-    try {
-      // Load the full real playlist and loop it, so ⏭ steps through every
-      // track and wraps back around to the start of the whole playlist at
-      // the end. Deliberately NOT passing a non-zero `index` into
-      // loadPlaylist() here — the YouTube IFrame API's loadPlaylist({index})
-      // option is unreliable: with a non-zero index it frequently cues the
-      // track but never actually starts playback (stays UNSTARTED/CUED
-      // forever, immune even to an explicit playVideo() retry), while the
-      // exact same call with index 0 (the default) always plays instantly.
-      // Instead we always load at the start, then jump to the tape's
-      // preferred track with playVideoAt() below, which is the API's
-      // purpose-built, reliable method for seeking to a playlist position.
-      ytPlayerRef.current.loadPlaylist({ list: deckTape.ytPlaylistId, listType: 'playlist' })
-      ytPlayerRef.current.setLoop(true)
-      ytPlayerRef.current.setVolume(volume)
-    } catch (err) {
-      showToast('⚠ TAPE UNREADABLE — check playlist ID')
-      return
-    }
-    // Belt-and-braces fallback: if the player still isn't playing/buffering
-    // shortly after, nudge it with an explicit playVideo(). This is
-    // deliberately DELAYED rather than fired right after loadPlaylist() —
-    // loadPlaylist() is async (it posts a message and loads in the
-    // background), so calling playVideo() in the same tick can race with
-    // that still-in-progress load: it can briefly play the not-yet-fully-
-    // switched player, which then gets reset once the real load catches
-    // up, leaving playback stuck after a one-second flash. Once playback
-    // has actually started, jump to the tape's preferred track index (if
-    // any) with playVideoAt — this itself also always starts playing.
-    const t = setTimeout(() => {
+    // Small debounce before actually touching the player — someone scanning
+    // quickly through the rack fires this effect once per click, and there's
+    // no reason to send an in-flight, about-to-be-superseded load to the
+    // iframe. Only the visitor's settled, final pick reaches the player.
+    const loadTimer = setTimeout(() => {
       if (cancelled || !ytPlayerRef.current) return
-      const state = ytPlayerRef.current.getPlayerState?.()
-      const settled = state === window.YT?.PlayerState?.PLAYING || state === window.YT?.PlayerState?.BUFFERING
-      if (!settled) { try { ytPlayerRef.current.playVideo() } catch (err) {} }
-      if (startIndex > 0) { try { ytPlayerRef.current.playVideoAt(startIndex) } catch (err) {} }
-    }, 400)
-    return () => { cancelled = true; clearTimeout(t) }
+      try {
+        // stopVideo() first, THEN loadPlaylist() — verified by hard testing
+        // (10+ consecutive tape switches, both slow/settled and rapid-fire,
+        // against a real headless browser) that reusing one YT.Player
+        // instance across many consecutive loadPlaylist() calls WITHOUT a
+        // stopVideo() reset in between degrades after about 3 switches: the
+        // 4th+ loadPlaylist() call is accepted with no error, but the
+        // player just never fires PLAYING (or any other state event) again
+        // — a silent, permanent hang with nothing in the console. Resetting
+        // with stopVideo() before every load prevents that degradation
+        // entirely; all runs stayed healthy indefinitely once added.
+        //
+        // Load the full real playlist and loop it, so ⏭ steps through every
+        // track and wraps back around to the start of the whole playlist at
+        // the end. Deliberately NOT passing a non-zero `index` into
+        // loadPlaylist() here — the YouTube IFrame API's loadPlaylist({index})
+        // option is unreliable: with a non-zero index it frequently cues the
+        // track but never actually starts playback (stays UNSTARTED/CUED
+        // forever, immune even to an explicit playVideo() retry), while the
+        // exact same call with index 0 (the default) always plays instantly.
+        // Instead we always load at the start, then jump to the tape's
+        // preferred track with playVideoAt() below, which is the API's
+        // purpose-built, reliable method for seeking to a playlist position.
+        ytPlayerRef.current.stopVideo()
+        ytPlayerRef.current.loadPlaylist({ list: deckTape.ytPlaylistId, listType: 'playlist' })
+        ytPlayerRef.current.setLoop(true)
+        ytPlayerRef.current.setVolume(volume)
+      } catch (err) {
+        showToast('⚠ TAPE UNREADABLE — check playlist ID')
+        return
+      }
+      // Belt-and-braces fallback: if the player still isn't playing/buffering
+      // shortly after, nudge it with an explicit playVideo(). This is
+      // deliberately DELAYED rather than fired right after loadPlaylist() —
+      // loadPlaylist() is async (it posts a message and loads in the
+      // background), so calling playVideo() in the same tick can race with
+      // that still-in-progress load: it can briefly play the not-yet-fully-
+      // switched player, which then gets reset once the real load catches
+      // up, leaving playback stuck after a one-second flash. Once playback
+      // has actually started, jump to the tape's preferred track index (if
+      // any) with playVideoAt — this itself also always starts playing.
+      const fallbackTimer = setTimeout(() => {
+        if (cancelled || !ytPlayerRef.current) return
+        const state = ytPlayerRef.current.getPlayerState?.()
+        const settled = state === window.YT?.PlayerState?.PLAYING || state === window.YT?.PlayerState?.BUFFERING
+        if (!settled) { try { ytPlayerRef.current.playVideo() } catch (err) {} }
+        // Skip the forced jump to the tape's preferred start track if the
+        // visitor already manually skipped/sought within this window — don't
+        // yank them back to track 0's preferred index after they deliberately
+        // navigated away from it.
+        if (startIndex > 0 && !userNavigatedRef.current) { try { ytPlayerRef.current.playVideoAt(startIndex) } catch (err) {} }
+      }, 400)
+      fallbackTimerRef.current = fallbackTimer
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(loadTimer)
+      clearTimeout(fallbackTimerRef.current)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deckTape, playerReady])
 
@@ -270,6 +310,7 @@ export default function TamizhRadio() {
   const handleSeek = (deltaSec) => {
     if (!introModeRef.current && !deckTape) return
     if (!playerReady) return
+    userNavigatedRef.current = true
     try {
       const t = ytPlayerRef.current.getCurrentTime() || 0
       ytPlayerRef.current.seekTo(Math.max(0, t + deltaSec), true)
@@ -279,16 +320,26 @@ export default function TamizhRadio() {
     if (!introModeRef.current && !deckTape) return
     if (!playerReady) return
     playClick()
+    userNavigatedRef.current = true
+    // A manual skip is a deliberate retry — give the playlist a fresh
+    // chance instead of staying silently given-up-on from an earlier streak
+    // of unrelated failed tracks.
+    gaveUpRef.current = false
+    errorStreakRef.current = 0
     try { dir > 0 ? ytPlayerRef.current.nextVideo() : ytPlayerRef.current.previousVideo() } catch (err) {}
   }
   const handleEject = () => {
     playClick()
     if (!deckTape) return
+    // Capture which tape we're ejecting — if the visitor loads a different
+    // one from the rack during the 500ms eject animation, this delayed call
+    // must not wipe out that new tape out from under them.
+    const ejectedId = deckTape.id
     setEjecting(true)
     try { ytPlayerRef.current.stopVideo() } catch (err) {}
     setPlaying(false)
     showToast('⏏ CASSETTE EJECTED')
-    setTimeout(() => { ejectTape(); setEjecting(false) }, 500)
+    setTimeout(() => { ejectTape(ejectedId); setEjecting(false) }, 500)
   }
   const handleScrub = (e) => {
     if (!introModeRef.current && !deckTape) return
