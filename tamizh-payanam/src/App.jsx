@@ -21,6 +21,7 @@ import CRTOverlay       from './components/CRTOverlay'
 import PaintedBackground from './components/PaintedBackground'
 import TopTicker        from './components/TopTicker'
 import TapeRack         from './components/TapeRack'
+import Landing          from './components/Landing'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 
 const REDUCED_MOTION = typeof window !== 'undefined' && window.matchMedia
@@ -37,6 +38,13 @@ export default function App() {
   const appRef  = useRef()
   const busRef  = useRef()
   const [fullscreen, setFullscreen] = useState(false)
+  const [landed, setLanded] = useState(() => {
+    try { return sessionStorage.getItem('tamizh-payanam-landed') === '1' } catch (e) { return false }
+  })
+  const enterApp = () => {
+    try { sessionStorage.setItem('tamizh-payanam-landed', '1') } catch (e) {}
+    setLanded(true)
+  }
   const [showFsHint, setShowFsHint] = useState(false)
   const musicPlaying = radioPlaying || isPlaying
 
@@ -124,6 +132,7 @@ export default function App() {
   return (
     <>
       <GlobalCSS />
+      {!landed && <Landing onEnter={enterApp} />}
       <Intro />
       <CRTOverlay />
       {/* Full-screen horn flash — sits above the world, below the CRT overlay */}
