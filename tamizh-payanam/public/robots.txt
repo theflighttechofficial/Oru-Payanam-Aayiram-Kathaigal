@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://oru-payanam-aayiram-kathaigal-xe6d-omega.vercel.app/sitemap.xml
